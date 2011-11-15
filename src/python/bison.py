@@ -241,6 +241,9 @@ class BisonParser(object):
     flexCFile = "lex.yy.c"
     
     flexCFile1 = "tmp.lex.c" # c output file from lex gets renamed to this
+
+    cflags_pre = ['-fPIC']  # = CFLAGS added before all arguments.
+    cflags_post = ['-O3','-g']  # = CFLAGS added after all arguments.
     
     verbose = 0
     

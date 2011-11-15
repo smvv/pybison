@@ -528,7 +528,9 @@ cdef class ParserEngine:
         #           extra_preargs=['/DWIN32', '/G4', '/Gs', '/Oit', '/MT', '/nologo', '/W3', '/WX', '/Id:\python23\include'])
     
         # link 'em into a shared lib
-        objs = ccompiler.compile([parser.bisonCFile1, parser.flexCFile1])
+        objs = ccompiler.compile([parser.bisonCFile1, parser.flexCFile1],
+                                 extra_preargs=parser.cflags_pre,
+                                 extra_postargs=parser.cflags_post)
         libFileName = parser.bisonEngineLibName+imp.get_suffixes()[0][0]
         if os.path.isfile(libFileName+".bak"):
             try:
@@ -551,7 +553,10 @@ cdef class ParserEngine:
                          'bisonCFile1', 'bisonHFile1', 'flexFile',
                          'flexCFile', 'flexCFile1',
                          ] + objs:
-                fname = getattr(parser, name, None)
+                if hasattr(parser, name):
+                    fname = getattr(parser, name)
+                else:
+                    fname = None
                 #print "want to delete %s" % fname
                 if fname and os.path.isfile(fname):
                     hitlist.append(fname)
