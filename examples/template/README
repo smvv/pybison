@@ -1,0 +1,15 @@
+The 'template.py' file in this directory is a working
+but very minimal parser.
+
+You can execute the file as is - the first time you
+do so, it will automatically build and load a parser
+engine library.
+
+This parser does nothing except read a bunch of words
+from its input stream, where a word is an alphanumeric
+string.
+
+Feel free to copy this file somewhere, and tinker away
+to your heart's content. This may be for you the fastest
+way to get a comfortable 'feel' of how PyBison does things.
+

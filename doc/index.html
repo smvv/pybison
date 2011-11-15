@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>PyBison - Python-based Parsing at the Speed of C</title>
+  </head>
+  <body>
+    <center>
+      <script type="text/javascript"><!--
+        google_ad_client = "pub-0243656465094951";
+        google_ad_width = 728;
+        google_ad_height = 90;
+        google_ad_format = "728x90_as";
+        google_ad_channel ="";
+        google_color_border = "DDB7BA";
+        google_color_bg = "FFF5F6";
+        google_color_link = "0000CC";
+        google_color_url = "008000";
+        google_color_text = "6F6F6F";
+        //--></script>
+      <script type="text/javascript"
+        src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+      </script>
+    </center>
+
+
+<center>Return to <a href="http://www.freenet.org.nz/python">David's Python Resources</a></center
+
+<h1>PyBison - Python-based Parsing at the Speed of C</h1>
+
+<hr>
+
+<h2>Getting PyBison</h2>
+
+<blockquote>
+
+License: GPL
+<small><i>(but we will consider applications for licenses for
+commercial non-open-source deployment)</i></small>
+<ul>
+  <li>Download PyBison - 
+<a href="http://www.freenet.org.nz/python/pybison/pybison-0.1.8.tar.gz">pybison-0.1.8.tar.gz</a>
+      </li>
+  <li>See an <a href="calc.py">Example that implements a simple calculator</a></li>
+  <li>Read the <a href="walkthrough.html">PyBison Walkthrough Tutorial</a></li>
+  <li>Peruse the <a href="api/index.html">PyBison API Reference</a></li>
+  <li>View the <a href="CHANGELOG.txt">Change Log</a></li>
+</ul>
+
+</blockquote>
+
+<hr>
+<h2>Introduction</h2>
+
+<blockquote>
+
+PyBison is a Python binding to the Bison (yacc) and Flex (lex) parser-generator
+utilities.<br>
+<br>
+It allows parsers to be quickly and easily developed as Python class
+declarations, and for these parsers to take advantage of the fast and
+powerful C-based Bison/Flex.<br>
+<br>
+Users write a subclass of a basic Parser object, containing a set of methods
+and attributes specifying the grammar and lexical analysis rules, and taking
+callbacks for providing parser input, and receiving parser target events.<br>
+<br>
+Presently, PyBison is only working on Linux (and possibly *BSD-based) systems.
+However, in time, (or if someone volunteers to help out with probably 2 hours'
+coding for a small shim layer) it's very possible PyBison will work on Windows
+as well.<br>
+<br>
+
+</blockquote>
+
+<hr>
+
+<h2>Features</h2>
+
+<blockquote>
+
+<ul>
+  <li>Runs at near the speed of C-based parsers, due to direct hooks into bison-generated C code</li>
+  <li>Full LALR(1) grammar support</li>
+  <li>Includes a utility to convert your legacy grammar (.y) and scanner (.l) scripts into
+      python modules compatible with PyBison</li>
+  <li>Easy to understand - the walkthrough and the examples will have you writing your
+      own parsers in minutes</li>
+  <li>Comfortable and intuitive callback mechanisms</li>
+  <li>Can export parse tree to XML with a simple method call
+      <b><i style="color:#800000">(New!)</i></b></li>
+  <li>Can reconstitute a parse tree from XML <b><i style="color:#800000">(New!)</i></b></li>
+  <li>Examples include working parsers for the languages:
+      <ul>
+        <li>ANSI C</li>
+        <li>Java (1.4.2)</li>
+      </ul>
+      </li>
+</ul>
+
+
+</blockquote>
+
+
+<h2>Comparison to Other Python Parsers</h2>
+
+<blockquote>
+
+This comparison is probably very biased, since it's written by the author
+of PyBison. However, it should help you to decide whether PyBison is for you.<br>
+<br>
+
+All the other Python-based parser-construction toolkits I've seen work
+in pure Python. While this offers conveniences such as not requiring binary compilation,
+and eliminating dependencies on third-party libraries and other software, it can
+incur a savage performance penalty.<br>
+<br>
+
+I've seen some Python parser frameworks which use an idiosyncratic syntax, which I
+couldn't (or wouldn't) comfortably relate to, especially since I have a background
+of developing large yacc-based packages. In particular, I wanted to build my
+parser in genuine Python source files, rather than embedding Python code into
+a different script language.<br>
+<br>
+
+On the other hand, I found the PLY parser framework to be much more comfortably
+Pythonic, in that targets are mapped to class methods. However, I ran into a
+couple of problems with PLY, namely:
+<ul>
+  <li>speed - PLY could be very slow with generating the parse tables, and
+      with parsing its input</li>
+  <li>capacity - due to its use of named-match regular expressions (and the
+      underlying Python limitation), the lexical analysis is limited to a
+      vocabulary of 100 unique token types - insufficient for large modern
+      languages.</li>
+  <li>model - PLY is limited to SLR parsing, whereas Bison does full LALR(1)</li>
+  <li>streaming - PLY's lexer requires the full input string to be made
+      available in one chunk, making it unsuitable for parsing streams of
+      unpredictable length, whereas Bison and Flex can work from a continuous
+      stream.
+</ul>
+
+With PyBison, I've opted for a system which:
+<ul>
+  <li>Extracts grammar and lexical analysis information from user-written
+      parser classes</li>
+  <li>Generates bison and flex sources, and converts these into C sources</li>
+  <li>Compiles these into a shared loadable library, which is re-usable with
+      subsequent parsing runs (and which gets automatically rebuilt if (by
+      virtue of hashing tests) any of the grammar, precedence, tokens or
+      lexing rules change</li>
+  <li>Uses Pyrex to interface with this library, calling its yyparse() routine
+      and taking callbacks for input requests and target fulfilment events</li>  
+</ul>
+The result is a parser toolkit with a Python front end and Python's luxurious
+comfort, ease of use, but with (most of) the speed and power of traditional
+bison/yacc-based parsers.
+</blockquote>
+
+  </body>
+</html>
+

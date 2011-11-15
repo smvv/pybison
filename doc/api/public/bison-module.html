@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>bison</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th bgcolor="#70b0f0" class="navselect">&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          PyBison&nbsp;API&nbsp;Reference
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        Module&nbsp;bison
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[<a href="../private/bison-module.html">show&nbsp;private</a>&nbsp;|&nbsp;hide&nbsp;private]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="bison-module.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF MODULE DESCRIPTION =========== -->
+<h2 class="module">Module bison</h2>
+
+<p>Wrapper module for interfacing with Bison (yacc)</p>
+<p>Written April 2004 by David McNab &lt;david&#64;freenet.org.nz&gt; 
+Copyright (c) 2004 by David McNab, all rights reserved.</p>
+<p>Released under the GNU General Public License, a copy of which should 
+appear in this distribution in the file called 'COPYING'. If this file is 
+missing, then you can obtain a copy of the GPL license document from the 
+GNU website at http://www.gnu.org.</p>
+<p>This software is released with no warranty whatsoever. Use it at your 
+own risk.</p>
+If you wish to use this software in a commercial application, and wish 
+to depart from the GPL licensing requirements, please contact the author 
+and apply for a commercial license.
+<hr/>
+
+<!-- =========== START OF CLASSES =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Classes</th></tr>
+<tr><td width="15%">
+  <b><a href="bison.BisonError-class.html"><code>BisonError</code></a></b></td>
+  <td>Flags an error to yyparse()</td></tr>
+<tr><td width="15%">
+  <b><a href="bison.BisonNode-class.html"><code>BisonNode</code></a></b></td>
+  <td>Generic class for wrapping parse targets.</td></tr>
+<tr><td width="15%">
+  <b><a href="bison.BisonParser-class.html"><code>BisonParser</code></a></b></td>
+  <td>Base parser class</td></tr>
+</table><br />
+
+
+<!-- =========== START OF EXCEPTIONS =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Exceptions</th></tr>
+<tr><td width="15%">
+  <b><a href="bison.ParserSyntaxError-class.html"><code>ParserSyntaxError</code></a></b></td>
+  <td>&nbsp;</td></tr>
+</table><br />
+
+
+<!-- =========== START OF FUNCTION SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Function Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison-module.html#bisonToPython" class="summary-sig-name"><code>bisonToPython</code></a>(<span class=summary-sig-arg>bisonfileName</span>,
+          <span class=summary-sig-arg>lexfileName</span>,
+          <span class=summary-sig-arg>pyfileName</span>,
+          <span class=summary-sig-arg>generateClasses</span>)</span></code>
+<br />
+Rips the rules, tokens and precedences from a bison file, and the 
+verbatim text from a lex file and generates a boilerplate python file 
+containing a Parser class with handler methods and grammar attributes</td></tr>
+</table><br />
+
+
+<!-- =========== START OF VARIABLE SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Variable Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>SRE_Pattern</code></font></td>
+<td><b><a href="bison-module.html#reSpaces"><code>reSpaces</code></a></b> = <span title="&lt;_sre.SRE_Pattern object at 0x4029a2f8&gt;"><code><span class="re"><span class="re-char">\s</span><span class="re-op">+</span></span>                                           </code>
+</span></td></tr>
+</table><br />
+
+
+<!-- =========== START OF FUNCTION DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Function Details</th></tr>
+</table>
+
+<a name="bisonToPython"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bisonToPython</span>(<span class=sig-arg>bisonfileName</span>,
+          <span class=sig-arg>lexfileName</span>,
+          <span class=sig-arg>pyfileName</span>,
+          <span class=sig-arg>generateClasses</span>=<span class=sig-default>0</span>)</span>
+  </h3>
+  <p>Rips the rules, tokens and precedences from a bison file, and the 
+  verbatim text from a lex file and generates a boilerplate python file 
+  containing a Parser class with handler methods and grammar 
+  attributes</p>
+  Arguments:
+  <ul>
+    <li>
+      bisonfileName - name of input bison script
+    </li>
+    <li>
+      lexfileName - name of input flex script
+    </li>
+    <li>
+      pyfileName - name of output python file
+    </li>
+    <li>
+      generateClasses - flag - default 0 - if 1, causes a unique class 
+      to be defined for each parse target, and for the corresponding 
+      target handler method in the main Parser class to use this class 
+      when creating the node.
+    </li>
+  </ul>
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+<br />
+
+
+<!-- =========== START OF VARIABLE DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Variable Details</th></tr>
+</table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="reSpaces"></a>
+<h3>reSpaces</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>SRE_Pattern</code>
+
+      </dd>
+<span title="&lt;_sre.SRE_Pattern object at 0x4029a2f8&gt;">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+<span class="re"><span class="re-char">\s</span><span class="re-op">+</span></span>                                                                    </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th bgcolor="#70b0f0" class="navselect">&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          PyBison&nbsp;API&nbsp;Reference
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.0 on Sun Jun 27 12:36:56 2004</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,20 @@
+This is a somewhat more advanced example, containing
+bison and lex scripts for a java source code parser.
+
+Note that there is no python file containing a Parser class. We
+have to generate one.
+
+To do this, run:
+
+ $ bison2py javaparser.y javaparser.l javaparser.py
+
+or just:
+
+ $ bison2py javaparser
+
+You should now see a file javaparser.py
+
+Then, just run the run-javaparser.py script. The
+script will instantiate a parser and run it on the
+whatever source file you give as an argument.
+

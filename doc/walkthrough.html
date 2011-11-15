@@ -1,0 +1,1036 @@
+<!--@+leo-ver=4-->
+<!--@+node:@file doc/walkthrough.html-->
+<!--@@language html-->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>PyBison Walkthrough</title>
+  </head>
+  <body>
+    <!--@    @+others-->
+    <!--@+node:body-->
+    <center>Back to <a href="index.html">PyBison Homepage</a></center>
+    
+    <h1>PyBison Walkthrough</h1>
+    
+    <!--@+others-->
+    <!--@+node:intro-->
+    <h2>0. Introduction</h2>
+    This document aims to get you up to speed with PyBison in the fastest possible
+    time, by walking you through the motions of using it, and supporting the explanations
+    with an example.<br>
+    <br>
+    <blockquote><big>
+    NOTE - recent versions of flex violate the ANSI standards.<br>
+    <br>
+    If any of the pyBison examples fail to build, remove the following line from the lex code portion of your scripts:
+    <b><blockquote>int yylineno = 0;</blockquote></b>
+    
+    Also, make sure your system is capable of looking in the local directory when trying to load .so files. If you see any errors like <b>failed to load somefilename.so</b>, just add "." to <b>LD_LIBRARY_PATH</b>, or
+    execute the command:
+    <b><blockquote>export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.</blockquote></b>
+    
+    </big></blockquote>
+    
+    <hr>
+    
+    <!--@-node:intro-->
+    <!--@+node:1. procure grammar/scanner scripts-->
+    <h2>1. Procure Grammar and Scanner Scripts</h2>
+    
+    <blockquote>
+    
+    The best place to start in building your PyBison parser is to write a grammar (.y)
+    script, and a scanner (.l) script.<br>
+    <br>
+    (Or, if possible, source these scripts from other (open source) projects).<br>
+    <br>
+    Once you're familiar with the layout of PyBison parser python modules, you can
+    skip this step, and start building each new parser from scratch, or fram a template
+    (refer to the <b>examples/template</b> directory).
+    
+    <!--@+others-->
+    <!--@+node:1.1 introducing pybison-->
+    <h3>1.1. Introducing the bison2py Utility</h3>
+    <blockquote>
+    
+    bison2py munges your new (or legacy) grammar (.y) and scanner (.l) files, and
+    generates a new Python file containing classes and unit test code for your
+    PyBison parser.<br>
+    <br>
+    To see <b>bison2py</b> in action, go into the <b>examples/java</b> directory,
+    read the README file, and generate a <b>javaparser.py</b> file from <b>javaparser.y</b>
+    and <b>javaparser.l</b> scripts.<br>
+    <br>
+    Study the generated javaparser.py file - it's
+    especially useful from a point of view of seeing what's good to put into a pybison
+    python parser file, especially when writing your own.<br>
+    <br>
+    In fact, when starting a new parser project, you might like to start by writing <b>.y</b>
+    and <b>.l</b> files yourself, and repeatedly:
+    <ol>
+      <li>Edit these files</li>
+      <li>Generate a parser from them with bison2py</li>
+      <li>Test the parser rigorously against a whole range of inputs</li>
+      <li>Remove the grammar and scanner errors as you find them</li>
+      <li>Repeat these steps as often as needed till you have a bug-free parser and scanner</li>
+    </ol>
+    
+    We suggest you may have a far easier time if you ensure you have a bug-free parser
+    script before even <i>beginning</i> to edit your target handler and parse node methods.<br>
+    <br>
+    Once you've got a stable parser, you'll have a structure to work from. You'll then be free to
+    discard or archive your .y and .l files, and tweak the grammar and scanner
+    by editing the target handler docstrings and scanner script attributes, respectively.
+    
+    </blockquote>
+    <hr>
+    
+    
+    <!--@-node:1.1 introducing pybison-->
+    <!--@+node:1.2 prepare grammar file-->
+    <h3>1.2. Preparing Your Grammar File</h3>
+    <blockquote>
+    If you're using an existing .y file (perhaps sourced from another project),
+    you'll need to massage it a bit to get it into a state where you can process
+    it automatically with bison2py.<br>
+    <br>
+    In summary, you'll need to:
+    <ul>
+      <li>Eliminate actions and comments from rules section</li>
+      <li>Replace character literals in rules, with abstract tokens</li>
+      <li>Enclose all <b>:</b>, <b>|</b> and <b>;</b> rule delimiters in whitespace.</li>
+    </ul>
+    
+    <h4>1.2.1. Strip Out Comments and Actions</h4>
+    <blockquote>
+    With your grammar (.y) file, you'll need to strip out all action statements
+    and comments from the rules section.<br>
+    <br>
+    For instance, if you're using a legacy grammar file, you'll need to convert rules like:
+    <b>
+    <pre>
+        expr: expr PLUS expr
+                { $$ = $1 + $3; } /* add the numbers now */
+             |expr MINUS expr
+                { $$ = $1 - $3; }
+             ;</pre>
+    </b>
+    to:
+    <b><pre>
+        expr : expr PLUS expr
+           | expr MINUS expr
+           ;</pre></b>
+    or:
+    <b>
+      <pre>
+        expr
+        : expr PLUS expr
+        | expr MINUS expr
+        ;</pre>
+    </b>
+    depending on what style meets your taste.<br>
+    <br>
+    The reason for this is that your pybison script will receive callbacks every time a parse
+    target is reached, which is done by automatically appending special action code to each
+    rule clause. If you don't remove all action statements, the conversion will fail.
+    </blockquote>
+    
+    <h4>1.2.2. Replace All Character Literals in Rules</h4>
+    
+    <blockquote>
+    Within the PyBison-generated parser, all targets and tokens are rendered as Python
+    objects (for people familiar with the Python/C API, type <b>PyObject *</b>)<br>
+    <br>
+    Therefore, you unfortunately lose the convenience of being able to deal in C character
+    literals in your rules.<br>
+    <br>
+    For instance, with a rule like:
+    
+    <b><pre>
+        expr : expr '+' expr
+           | expr '-' expr
+           ;</pre></b>
+    
+    you'll have to replace the <b>'+'</b> and <b>'-'</b> char literals to abstract tokens,
+    and ensure that your scanner script returns Python-wrapped tokens for these operators.
+    You should end up with a rule like:
+    
+    <b><pre>
+        expr : expr PLUS expr
+           | expr MINUS expr
+           ;</pre></b>
+    
+    And you'll need to ensure your scanner script does a <b>returntoken(PLUS);</b>
+    and <b>returntoken(MINUS);</b> for <b>'+'</b> and <b>'-'</b> respectively.
+    </blockquote>
+    
+    <h4>1.2.3. Enclose Rule Delimiters in Whitespace</h4>
+    
+    <blockquote>
+    You need to ensure that the delimiters <b>:</b>, <b>|</b> and <b>;</b> delimiters used in
+    your rules have at least one whitespace character on either side. Sorry about this, but
+    this version of PyBison has some quirks in the regular expressions used for
+    extracting/dissecting the rules, and bison2py (or the resultant parser) may fail
+    if you don't follow this step.
+    </blockquote>
+    
+    
+    And also, you'll need to have a:
+    <blockquote><b>
+      %{
+      ...
+      %}
+    </b></blockquote>
+    section in the prologue (before the first <b>%%</b>).
+    </blockquote>
+    <hr>
+    
+    <!--@-node:1.2 prepare grammar file-->
+    <!--@+node:1.3 prepare lex file-->
+    <h3>1.3. Preparing Your Tokeniser File</h3>
+    <blockquote>
+    
+    In addition to parse targets callbacks, PyBison has an input callback, so your Parser
+    object will have control over the input that is sent to the lexer.<br>
+    <br>
+    You'll have to set up your tokeniser to use this callback mechanism, and also to wrap
+    tokens as Python objects.<br>
+    <br>
+    To set this up, ensure the following lines are in the C declarations sections of your
+    lex/flex script:
+    <b><pre>
+    %{
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+    #include "Python.h"
+    #define YYSTYPE void *
+    #include "tokens.h"
+    extern void *py_parser;
+    extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
+    #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
+    #define YY_INPUT(buf,result,max_size) {(*py_input)(py_parser, buf, &result, max_size);}
+    }%</pre></b>
+    
+    <b>&lt;quick-diversion&gt;</b>
+    <small><blockquote>
+    Let's explain each of these lines now:
+    
+    <b><pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+    #include "Python.h"</pre></b>
+    Include the standard <b>stdio.h</b> and <b>string.h</b> headers, as well as the
+    Python-C API file <b>Python.h</b>.
+    
+    <b><pre>
+    #define YYSTYPE void *</pre></b>
+    
+    All parse targets and tokens are actually of type <b>PyObject *</b>, or 'pointer to
+    Python object', but neither bison nor flex-generated code need to know this. We'll
+    just give them opaque pointers, and <b>void *</b> will suffice just fine.
+    
+    <b><pre>
+    #include "tokens.h"</pre></b>
+    
+    When PyBison first instantiates any given parser class (and auto-generates, processes,
+    compiles, links the grammar/scanner files into a dynamic lib), the bison program generates
+    a header file of token definitions, which gets renamed to <b>tokens.h</b>. Your scanner
+    script will need this file, so the token macros will be defined and resolved to the correct
+    token numbers.
+    
+    <b><pre>
+    extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
+    extern void *py_parser;
+    #define YY_INPUT(buf,result,max_size) {(*py_input)(py_parser, buf, &result, max_size);}</pre></b>
+    
+    These lines activate the input callback mechanism. Whenever the scanner needs more input,
+    it will call a global function called <b>py_input()</b>, which forwards the callback to
+    your Python Parser's <b>.read(nbytes)</b> method.
+    
+    <blockquote>
+    Note that if you want your scanner to use a different source of input (eg, a live TCP socket
+    connection), you can override this method in your parser class, or pass a <b>read=myreadfunction</b>
+    keyword argument when instantiating your parser (<b>myreadfunction</b> should be a callable
+    accepting a single argument <b>nbytes</b>, being the maximum number of bytes to retrieve,
+    and returning a string).
+    </blockquote>
+    
+    <b><pre>
+    #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);</pre></b>
+    
+    A macro which wraps all tokens values as Python strings, so your parser target handlers can uplift
+    the original input text which constitutes that token.
+    
+    </blockquote></small>
+    <b>&lt;/quick-diversion&gt;</b><br><br>
+    
+    Defining the <b>YY_INPUT</b> C macro tells flex to invoke a callback every time it needs
+    input, so your <b>Parser</b> class' <b>.read()</b> method will have control over what the
+    lexer receives.<br>
+    <br>
+    Now, you'll need to change all the <b>return</b> statements in your token targets to use
+    <b>returntoken()</b> instead. For example, change:
+    <blockquote>
+      <b>
+        "(" { return LPAREN; }<br>
+      </b>
+    </blockquote>
+    to:
+    <blockquote>
+      <b>
+        "(" { returntoken(LPAREN); }<br>
+      </b>
+    </blockquote>
+    
+    Lastly, in the epilogue of your lexer file (ie, after the second '%%' line), you'll need to add a line like:
+    <b><pre>
+    yywrap() { return(1); }
+    </pre></b>
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:1.3 prepare lex file-->
+    <!--@+node:1.4 do the conversion-->
+    <h3>1.4. Doing The Conversion</h3>
+    <blockquote>
+    
+    When you're sure you've got your .y and .l files prepared properly, you can generate
+    the .py file, which will contain your pyBison <b>Parser</b> class.<br>
+    <br>
+    To do this conversion, run the command:
+    <blockquote>
+      <b>bison2py mybisonfile.y myflexfile.l mypythonfile.py</b>
+    </blockquote>
+    where <b>mybisonfile.y</b> is your grammar file, with bison/yacc declarations,
+    <b>myflexfile.l</b> is your tokeniser script, with flex/lex declarations, and
+    <b>mypythonfile.py</b> is the name of the python file you want to generate.<br>
+    <br>
+    You should now see a file <b>mypythonfile.py</b> which contains a couple of import
+    statements, plus a declaration of a class called <b>Parser</b>.
+    
+    <blockquote>
+    If your grammar is large and complex, you should consider adding a <b>-c</b>
+    argument to the bison2py command.<br>
+    <br>
+    This will cause the <b>mypythonfile.py</b> file to be generated with a bunch
+    of parse node subclasses, one per parse target, and with each grammar target
+    handler method instantiating its respective parse node class, rather
+    than the default pybison.BisonNode class.<br>
+    <br>
+    Also, it'll generate a <b>ParseNode</b> class (derived from <b>pybison.BisonNode</b>,
+    from which all these target-specific node classes are derived.
+    <br>
+    This can be extremely handy, because you can add a bunch of methods to the
+    ParseNode class, and optionally override these in your per-target node classes. Also,
+    override the constructor and/or the existing .dump() method in this class or
+    the per-target classes.<br>
+    
+    </blockquote>
+    
+    </blockquote>
+    
+    <!--@-node:1.4 do the conversion-->
+    <!--@-others-->
+    
+    </blockquote>
+    
+    <hr>
+    
+    
+    
+    <!--@-node:1. procure grammar/scanner scripts-->
+    <!--@+node:2. prepare parser class-->
+    <a name="chap2">
+    
+    <h2>2. Prepare Your Parser Class</h2>
+    
+    <blockquote>
+    
+    Now, we focus on creation of a working parser.<br>
+    <br>
+    Note here that we will be creating the parser .py file by hand from
+    scratch - not the preferred approach, but chosen here as an alternative
+    to deriving a parser module boilerplate as discussed in the previous chapter.<br>
+    <br>
+    To make this easy, we will use
+    a simple calculator example.<br>
+    <br>
+    Create a new python file, perhaps <b>mycalc.py</b>, and follow these steps:<br>
+    
+    <hr>
+    
+    <!--@+others-->
+    <!--@+node:2.1. required imports-->
+    <h3>2.1. Required Imports</h3>
+    <blockquote>
+    
+    You will need at least the following imports:
+    <blockquote>
+        <b>from bison import BisonParser, BisonNode</b>
+    </blockquote>
+    
+    <b>BisonParser</b> is the base class from which you derive your own
+    Parser class.<br>
+    <br>
+    
+    <b>BisonNode</b> is a convenient wrapper for containing the contents
+    of parse targets, and can assist you in building your parse tree.<br>
+    <br>
+    
+    </blockquote>
+    
+    <hr>
+    
+    
+    <!--@-node:2.1. required imports-->
+    <!--@+node:2.2. devise your grammar-->
+    <h3>2.2. Devise Your Grammar</h3>
+    
+    <blockquote>
+    
+    We'll base our example on the Calculator example from the standard bison/yacc manual.
+    Note that we won't use exactly the same token names:
+    <b>
+    <pre>
+    %token NUM
+    %left '-' '+'
+    %left '*' '/'
+    %left NEG     /* negation--unary minus */
+    %right '^'    /* exponentiation        */
+    
+    /* Grammar follows */
+    %%
+    input:    /* empty string */
+            | input line
+    ;
+    
+    line:     '\n'
+            | exp '\n'  { printf ("\t%.10g\n", $1); }
+    ;
+    
+    exp:      NUM                { $$ = $1;         }
+            | exp '+' exp        { $$ = $1 + $3;    }
+            | exp '-' exp        { $$ = $1 - $3;    }
+            | exp '*' exp        { $$ = $1 * $3;    }
+            | exp '/' exp        { $$ = $1 / $3;    }
+            | '-' exp  %prec NEG { $$ = -$2;        }
+            | exp '^' exp        { $$ = pow ($1, $3); }
+            | '(' exp ')'        { $$ = $2;         }
+    ;
+    </pre>
+    </b>
+    
+    However, in PyBison, you don't dump all this into a script - you declare the
+    grammar items one by one in methods of your class.
+    
+    </blockquote>
+    
+    <hr>
+    <!--@-node:2.2. devise your grammar-->
+    <!--@+node:2.3. skeleton class-->
+    <h3>2.3. Create Skeleton Parser Class</h3>
+    
+    <blockquote>
+    
+    In your calc.py file, you've already done the required imports, so
+    now you can create your skeleton class declaration:
+    
+    <b><blockquote><pre>
+    class Parser(BisonParser):
+    
+        pass
+    </pre></blockquote></b>
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2.3. skeleton class-->
+    <!--@+node:2.4. declare tokens-->
+    <h3>2.4. Declare the Tokens</h3>
+    
+    <blockquote>
+    
+    Now, it's time to declare our tokens. To do this, we add to our class an attribute
+    called <b>tokens</b> which contains a list of our tokens.<br>
+    <br>
+    Our class now looks like this:
+    <b>
+    <blockquote>
+    <pre style="color: #808080">
+    class Parser(BisonParser):</pre>
+    <pre>
+        tokens = ['NUMBER',
+                  'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
+                  'LPAREN', 'RPAREN',
+                  'NEWLINE', 'QUIT',
+                  ]
+    </pre>
+    </blockquote>
+    </b>
+    
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2.4. declare tokens-->
+    <!--@+node:2.5. declare precedences-->
+    <h3>2.5. Declare the Precedences</h3>
+    
+    <blockquote>
+    
+    To resolve ambiguities in our grammar, we need to declare which entities
+    have precedence, and the associativity (left/right) of these entities.<br>
+    <br>
+    We adapt this from the example, and add it as an attribute <b>precedences</b>.<br>
+    <br>
+    Our class now looks like this:
+    
+    <b><pre style="color: #808080">
+    class Parser(BisonParser):
+    
+        tokens = ['NUMBER',
+                  'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
+                  'LPAREN', 'RPAREN',
+                  'NEWLINE', 'QUIT',
+                  ]</pre>
+    <pre>
+        precedences = (
+            ('left', ('MINUS', 'PLUS')),
+            ('left', ('TIMES', 'DIVIDE')),
+            ('left', ('NEG', )),
+            ('right', ('POW', )),
+            )</pre></b>
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2.5. declare precedences-->
+    <!--@+node:2.6. declare the start symbol-->
+    <h3>2.6. Declare the Start Symbol</h3>
+    
+    <blockquote>
+    
+    As you can see from studying the grammar above, the topmost
+    entity is <b>line</b>. We need to tell PyBison to use this,
+    by adding an attribute called <b>start</b>.
+    <br>
+    Our class now looks like this:
+    <b><pre style="color: #808080">
+    class Parser(BisonParser):
+    
+        tokens = ['NUMBER',
+                  'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
+                  'LPAREN', 'RPAREN',
+                  'NEWLINE', 'QUIT',
+                  ]
+    
+        precedences = (
+            ('left', ('MINUS', 'PLUS')),
+            ('left', ('TIMES', 'DIVIDE')),
+            ('left', ('NEG', )),
+            ('right', ('POW', )),
+            )</pre>
+    <pre>
+        start = 'input'</pre></b>
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2.6. declare the start symbol-->
+    <!--@+node:2.7. add rules callbacks-->
+    <h3>2.7. Add Rules Callbacks</h3>
+    
+    <blockquote>
+    
+    This is the fun part. We add a method to our class for each of
+    the parse targets.<br>
+    <br>
+    For each parse target <b>sometarget</b>, we need to provide a method
+    called:
+    <b><blockquote><pre>on_sometarget(self, target, option, names, items)</pre></blockquote></b>
+    Each such callback method accepts the arguments:
+    <ul>
+      <li><b>target</b> - string - the name of the target - passed in mainly as
+          a convenience for when you're debugging your grammar.
+          </li>
+    
+      <li><b>option</b> - int - a numerical index indicating which 'clause' matched
+          the target. For example, given a rule:
+          <b><pre>
+            exp : NUMBER
+                | exp PLUS exp
+                | exp MINUS exp</pre></b>
+          If we have matched the expression <b>3 + 6</b>, the <b>option</b> argument
+          will be 1, because the clause <b>exp PLUS exp</b> occurs at position 1
+          in the list of rule clauses.</li>
+      
+      <li><b>names</b> - list of strings, being names of the terms in the matching clause.
+          For example, with the above rule, the expression <b>3 + 6</b> would produce a
+          names list <b>['exp', 'PLUS', 'exp']</b></li>
+    
+      <li><b>items</b> - list - a list of objects, being the values of the items in the
+          matching clause. Each item of this list will (in the case of token
+          matches), be a literal string of the token, or (in the case of previously
+          handled parse targets), whatever your parse target handler happened to
+          return previously. For instance, in the <b>3 + 6</b> example, assuming your <b>on_exp()</b>
+          handler returns a float value, this list would be <b>[3.0, '+', 6.0]</b></li>
+    </ul>
+    
+    We must now note a major difference from traditional yacc/bison. In yacc/bison, we
+    provide <b>{ action-stmts;... }</b> action blocks after each rule clause. But with
+    pyBison, the one parse target callback handles all possible clauses for that target.
+    The <b>option</b> argument indicates which clause actually matched.<br>
+    <br>
+    Now, with this explanation out of the way, we can get down to the business of actually
+    writing our callbacks.<br>
+    <br>
+    Our class now looks like:
+    
+    <b><pre style="color: #808080">
+    class Parser(BisonParser):
+    
+        tokens = ['NUMBER',
+                  'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
+                  'LPAREN', 'RPAREN',
+                  'NEWLINE', 'QUIT',
+                  ]
+    
+        precedences = (
+            ('left', ('MINUS', 'PLUS')),
+            ('left', ('TIMES', 'DIVIDE')),
+            ('left', ('NEG', )),
+            ('right', ('POW', )),
+            )
+    
+        start = 'input'</pre>
+    <pre>
+        def on_input(self, target, option, names, items):
+            """
+            input :
+                  | input line
+            """
+            return
+    
+        def on_line(self, target, option, names, items):
+            """
+            line : NEWLINE
+                 | exp NEWLINE
+            """
+            if option == 1:
+                print "on_line: got exp %s" % items[0]
+    
+        def on_exp(self, target, option, names, items):
+            """
+            exp : NUMBER
+                | exp PLUS exp
+                | exp MINUS exp
+                | exp TIMES exp
+                | exp DIVIDE exp
+                | MINUS exp %prec NEG
+                | exp POW exp
+                | LPAREN exp RPAREN
+            """
+            if option == 0:
+                return float(items[0])
+            elif option == 1:
+                return items[0] + items[2]
+            elif option == 2:
+                return items[0] - items[2]
+            elif option == 3:
+                return items[0] * items[2]
+            elif option == 4:
+                return items[0] / items[2]
+            elif option == 5:
+                return - items[1]
+            elif option == 6:
+                return items[0] ** items[2]
+            elif option == 7:
+                return items[1]
+    </pre></b>
+    
+    Note one important thing here - the rules, declared in our docstrings, are <b>not</b> terminated
+    by a semicolon. This is not needed (as in traditional yacc), because the rules
+    are separated into separate handler method docstrings, rather than being lumped in together.<br>
+    <br>
+    So don't put a semicolon in your grammar rule docstrings, or Bad Things might happen.
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2.7. add rules callbacks-->
+    <!--@+node:2.8. add flex script-->
+    <h3>2.8. Add Flex Script</h3>
+    
+    <blockquote>
+    
+    Finally, we must tell pyBison how to carve up the input into tokens.<br>
+    <br>
+    Instead of having a separate flex or lex script, we embed the script
+    verbatim as attribute <b>lexscript</b>.<br>
+    <br>
+    <b>NOTE</b> - you should provide this script as a Python raw string (<b>r"""</b>)<br>
+    <br>
+    We'll use here a simple flex script which simply recognises numbers, the '+',
+    '-', '*', '/', '**' operators, and parentheses.<br>
+    <br>
+    For our lexer to work, it will need a C declarations section with the magic lines:
+    
+    <b><pre>
+    %{
+    int yylineno = 0;
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+    #include "Python.h"
+    #define YYSTYPE void *
+    #include "tokens.h"
+    extern void *py_parser;
+    extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
+    #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
+    #define YY_INPUT(buf,result,max_size) { (*py_input)(py_parser, buf, &result, max_size); }
+    %}
+    </pre></b>
+    (refer to Section 1.3 above for an explanation of these declarations).<br>
+    <br>
+    
+    Our completed <b>Parser</b> class declaration now looks like this:
+    <b><pre>
+    class Parser(BisonParser):
+    
+        tokens = ['NUMBER',
+                  'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
+                  'LPAREN', 'RPAREN',
+                  'NEWLINE', 'QUIT']
+    
+        precedences = (
+            ('left', ('MINUS', 'PLUS')),
+            ('left', ('TIMES', 'DIVIDE')),
+            ('left', ('NEG', )),
+            ('right', ('POW', )),
+            )
+    
+        def read(self, nbytes):
+            try:
+                return raw_input("> ")
+            except EOFError:
+                return ''
+    
+        # Declare the start target here (by name)
+        start = "input"
+    
+        def on_input(self, target, option, names, items):
+            """
+            input :
+                  | input line
+            """
+            return
+    
+        def on_line(self, target, option, names, items):
+            """
+            line : NEWLINE
+                 | exp NEWLINE
+            """
+            if option == 1:
+                print items[0].value
+    
+        def on_exp(self, target, option, names, items):
+            """
+            exp : NUMBER
+                | exp PLUS exp
+                | exp MINUS exp
+                | exp TIMES exp
+                | exp DIVIDE exp
+                | MINUS exp %prec NEG
+                | exp POW exp
+                | LPAREN exp RPAREN
+            """
+            if option == 0:
+                return float(items[0])
+            elif option == 1:
+                return items[0] + items[2]
+            elif option == 2:
+                return items[0] - items[2]
+            elif option == 3:
+                return items[0] * items[2]
+            elif option == 4:
+                return items[0] / items[2]
+            elif option == 5:
+                return - items[1]
+            elif option == 6:
+                return items[0] ** items[2]
+            elif option == 7:
+                return items[1]
+    
+        lexscript = r"""
+    %{
+    int yylineno = 0;
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+    #include "Python.h"
+    #define YYSTYPE void *
+    #include "tokens.h"
+    extern void *py_parser;
+    extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
+    #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
+    #define YY_INPUT(buf,result,max_size) { (*py_input)(py_parser, buf, &result, max_size); }
+    %}
+    
+    %%
+    
+    [0-9]+ { returntoken(NUMBER); }
+    "("    { returntoken(LPAREN); }
+    ")"    { returntoken(RPAREN); }
+    "+"    { returntoken(PLUS); }
+    "-"    { returntoken(MINUS); }
+    "*"    { returntoken(TIMES); }
+    "**"   { returntoken(POW); }
+    "/"    { returntoken(DIVIDE); }
+    "quit" { printf("lex: got QUIT\n"); yyterminate(); returntoken(QUIT); }
+    
+    [ \t\v\f]             {}
+    [\n]		{yylineno++; returntoken(NEWLINE); }
+    .       { printf("unknown char %c ignored\n", yytext[0]); /* ignore bad chars */}
+    
+    %%
+    
+    int yywrap() { return(1); }
+    """
+    </pre></b>
+    
+    <blockquote style=""color:#900000"><big><b>NOTE</b> - if you are using recent versions of flex (ie, the ones which violate
+    the ANSI standards for lex/flex), you'll have to change the lexing code above;
+    removing the line <b>int yylineno = 0;</b></big></blockquote><br>
+    <br>
+    
+    Note that we've sneaked in an additional method, <b>.read(self, nbytes)</b>.
+    This is another callback that gets invoked by the lexer whenever it needs
+    more input. <i>(quick tip - in your mycalc.py file, do an 'import readline', so
+    you get line editing and recall when the parser runs)</i>.<br>
+    <br>
+    This gives a lot of flexibility, because our Parser class gets to control
+    exactly where its input comes from - file, or a string, socket, whatever.<br>
+    <br>
+    
+    </blockquote>
+    
+    <hr>
+    
+    
+    
+    
+    <!--@-node:2.8. add flex script-->
+    <!--@+node:2.9. write runner script-->
+    <h3>2.9. Write Runner Script</h3>
+    
+    <blockquote>
+    
+    One quick last thing to do here - we just need a tiny script (say, 'runcalc.py'),
+    to import our Parser class and run it:
+    
+    <b><blockquote><pre>
+    #!/usr/bin/env python
+    import mycalc
+    p = mycalc.Parser()
+    p.run()
+    </pre></blockquote></b>
+    
+    There's a specific reason why we do this - if we made our <b>mycalc.py</b>
+    script executable, then when we first instantiate our <b>Parser</b> class,
+    PyBison will guess a name for the dynamic library to create. If running
+    mycalc.py directly, then <b>self.__class__.__module__</b> will be '__main__',
+    and our dynamic library would be created with the name <b>__main__-parser.so</b>,
+    which is pretty ugly. You could force a name for the library file by declaring
+    an additional attribute in the Parser class:
+    <b><blockquote><pre>
+    bisonEngineLibName = "mycalc-parser"
+    </pre></blockquote></b>
+    Oh, and don't forget to chmod the script to be executable.
+    </blockquote>
+    
+    <!--@-node:2.9. write runner script-->
+    <!--@-others-->
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:2. prepare parser class-->
+    <!--@+node:3. running our example-->
+    <h2>3. Run The Parser</h2>
+    
+    <blockquote>
+    
+    We're now ready to run our completed parser.<br>
+    <br>
+    Given that you have created the files <b>mycalc.py</b> and <b>runcalc.py</b>
+    in the current directory, and that you've already installed PyBison (refer INSTALL
+    file), you'll be set to go.<br>
+    <br>
+    From your shell, just type:
+    <b><blockquote><pre>
+      $ ./runcalc.py
+    </pre></blockquote></b>
+    The first time you run this parser, it might make a lot of compilation-type noises. For example, my aging Debian-based system produces:
+    <b><blockquote><pre>
+    In file included from /usr/include/python2.3/Python.h:8,
+                     from tmp.l:6:
+    /usr/include/python2.3/pyconfig.h:847:1: warning: "_POSIX_C_SOURCE" redefined
+    In file included from /usr/include/stdio.h:28,
+                     from tmp.lex.c:11:
+    /usr/include/features.h:171:1: warning: this is the location of the previous definition
+    </pre></blockquote></b>
+    All this relates to a bit of black magic which is happening in the background.<br>
+    <br>
+    The first time you instantiate your <b>mycalc.Parser</b> class, the <b>bison.BisonParser</b>
+    base class tries to load the dynamic library <b>mycalc-parser.so</b> (or, on windows, mycalc-parser.dll).<br>
+    <br>
+    If the library file is not present (or if it is out of date, determined from hashing handler docstrings and pertinent attributes in the class), PyBison attempts to build it.<br>
+    <br>
+    To build this library, PyBison:
+    <ul>
+      <li>Rips the static attributes, and handler method docstrings, from the client
+          Parser class</li>
+      <li>Generates temporary grammar (tmp.y) and tokeniser (tmp.l) files</li>
+      <li>Runs <b>bison</b> (or <b>self.bisonCmd</b>, refer source file bison.pyx) on tmp.y</li>
+      <li>Runs <b>flex</b> (or <b>self.flexCmd</b>, refer bison.pyx) on tmp.l</li>
+      <li>Compiles the resulting <b>tmp.bison.c</b> and <b>tmp.flex.c</b> files to
+          object files</li>
+      <li>Links these objects into the shared library file <b>mycalc-parser.so</b></li>
+    Subsequent instantiations of the class will not repeat this compilation, unless you
+    happen to have changed the embedded lex script, or grammar-related attributes of
+    your class.<br>
+    <hr>
+    Getting back to the point - as long as the <b>mycalc-parser.so</b> library built
+    and loaded successfully, we should now see a prompt (refer <b>.input(self, nchars)</b>
+    method in 2.8):
+    
+    <b><blockquote><pre>
+    $ ./runcalc.py
+    &gt;
+    </pre></blockquote></b>
+    At this prompt, you can type in numbers, or simple arithmetic expressions, and see the
+    result get printed out:
+    <b><blockquote><pre>
+    &gt; 2 + 3
+    5
+    &gt; 4 + 5 * 6
+    34
+    </pre></blockquote></b>
+    (note that the higher precedence of '*' has applied).
+          
+    </ul>
+    
+    </blockquote>
+    
+    <hr>
+    <!--@-node:3. running our example-->
+    <!--@+node:4. miscellaneous-->
+    <h2>4. Miscellaneous Remarks</h2>
+    
+    <blockquote>
+    
+    Just a few quick notes, to cover some of the possible gotchas.<br>
+    
+    <!--@+others-->
+    <!--@+node:4.1. plurality-->
+    <h3>4.1. Plurality</h3>
+    
+    <blockquote>
+    
+    In the present version of PyBison, you may only have one instance of
+    any given Parser class actually <i>running</i> at any one time.
+    This is because the present version of PyBison makes use of a couple
+    of global C variables to store hooks into your Parser instance.<br>
+    <br>
+    However, you can have multiple instances existing at the same time.<br>
+    <br>
+    Also, you can have several parsers running at the same time, <b><i>as long as
+    they are each instantiated from different Parser classes</i></b>.
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:4.1. plurality-->
+    <!--@+node:4.2. building a parse tree-->
+    <h3>4.2. Building A Parse Tree</h3>
+    
+    <blockquote>
+    
+    The <b>.run()</b> method of your parser object returns whatever your handler for
+    the top-level target returned.<br>
+    <br>
+    Building a whole parse tree is pretty simple.<br>
+    <br>
+    Within each parse target handler callback (your <b>.on_whateverTarget()</b> methods),
+    you need to create a new <b>BisonNode</b> instance, and store the component items
+    (the <b>items</b> argument, or whatever you want to extract from <b>items</b>) as
+    attributes, then return this BisonNode object.<br>
+    <br>
+    Then, with the BisonNode object returned from your parser's <b>.run()</b> method,
+    you'll be able to traverse the tree of the entire parse run.
+    
+    </blockquote>
+    <!--@-node:4.2. building a parse tree-->
+    <!--@-others-->
+    
+    </blockquote>
+    
+    <hr>
+    
+    <!--@-node:4. miscellaneous-->
+    <!--@+node:5. conclusion-->
+    <h2>5. Conclusion</h2>
+    
+    <blockquote>
+    
+    Through this document, we have started from scratch, and created and used a
+    complete, working parser.<br>
+    <br>
+    We have presented the options of starting with existing .y and .l scripts and
+    converting them to a boilerplate PyBison .py file, versus writing your own
+    python parser file from scratch.<br>
+    <br>
+    We have covered the requirements for building Parser classes, the attributes and
+    methods you need to declare.<br>
+    <br>
+    We have discussed the callback model, whereby instances of your Parser class
+    receive callbacks from PyBison whenever input is required, and whenver a
+    parse target has been unambiguously reached.<br>
+    <br>
+    We have briefly discussed how PyBison derives grammar and tokeniser scripts
+    from the contents of our Parser class, and how PyBison runs bison and flex on
+    these scripts, compiles the output, and links the result into a shared library,
+    which can be used in subsequent uses of the Parser to get almost the full speed
+    of C-based code, from the comfort and convenience of the Python environment.<br>
+    <br>
+    And also, we have briefly mentioned how to use PyBison to build up a parse tree
+    as an easily-traversed Python data structure.<br>
+    <br>
+    We hope this document has got you up to speed without undue head-scratching, and
+    that you're now starting to get a feel for designing and building your own
+    parsers.
+    
+    </blockquote>
+    
+    <!--@-node:5. conclusion-->
+    <!--@-others-->
+        <hr>
+        <address><a href="mailto:david@freenet.co.nz">David McNab</a></address>
+    <!-- Created: Fri Apr 23 01:27:41 NZST 2004 -->
+    <!-- hhmts start -->
+    <!-- hhmts end -->
+    <!--@-node:body-->
+    <!--@-others-->
+  </body>
+</html>
+
+<!--@-node:@file doc/walkthrough.html-->
+<!--@-leo-->

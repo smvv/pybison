@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>bison.BisonNode</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="bison-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          PyBison&nbsp;API&nbsp;Reference
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        <a href="bison-module.html">Module&nbsp;bison</a> ::
+        Class&nbsp;BisonNode
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[show&nbsp;private&nbsp;|&nbsp;<a href="../public/bison.BisonNode-class.html">hide&nbsp;private</a>]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="bison.BisonNode-class.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF CLASS DESCRIPTION =========== -->
+<h2 class="class">Class BisonNode</h2>
+
+<hr/>
+
+<p>Generic class for wrapping parse targets.</p>
+Arguments:
+<ul>
+  <li>
+    targetname - the name of the parse target being wrapped.
+  </li>
+  <li>
+    items - optional - a list of items comprising a clause in the 
+    target rule - typically this will only be used by the PyBison 
+    callback mechanism.
+  </li>
+</ul>
+Keywords:
+<ul>
+  <li>
+    any keywords you want (except 'items'), with any type of value. 
+    keywords will be stored as attributes in the constructed object.
+  </li>
+</ul>
+<hr/>
+
+
+<!-- =========== START OF METHOD SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Method Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__init__"></a><span class="summary-sig"><span class="summary-sig-name">__init__</span>(<span class=summary-sig-arg>self</span>,
+          <span class="summary-sig-kwarg">**kw</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#__getitem__" class="summary-sig-name"><code>__getitem__</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>item</span>)</span></code>
+<br />
+Retrieves the ith value from this node, or child nodes</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__getslice__"></a><span class="summary-sig"><span class="summary-sig-name">__getslice__</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>fromidx</span>,
+          <span class=summary-sig-arg>toidx</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__iter__"></a><span class="summary-sig"><span class="summary-sig-name">__iter__</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__len__"></a><span class="summary-sig"><span class="summary-sig-name">__len__</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__repr__"></a><span class="summary-sig"><span class="summary-sig-name">__repr__</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__str__"></a><span class="summary-sig"><span class="summary-sig-name">__str__</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#dump" class="summary-sig-name"><code>dump</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>indent</span>)</span></code>
+<br />
+For debugging - prints a recursive dump of a parse tree node and its 
+children</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#toprettyxml" class="summary-sig-name"><code>toprettyxml</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>indent</span>,
+          <span class=summary-sig-arg>newl</span>,
+          <span class=summary-sig-arg>encoding</span>)</span></code>
+<br />
+returns a human-readable xml serialisation of this node and its 
+children</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#toxml" class="summary-sig-name"><code>toxml</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Returns an xml serialisation of this node and its children, as a raw 
+string</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#toxmldoc" class="summary-sig-name"><code>toxmldoc</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Returns the node and its children as an xml.dom.minidom.Document 
+object</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="bison.BisonNode-class.html#toxmlelem" class="summary-sig-name"><code>toxmlelem</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>docobj</span>)</span></code>
+<br />
+Returns a DOM Element object of this node and its children</td></tr>
+</table><br />
+
+
+<!-- =========== START OF METHOD DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Method Details</th></tr>
+</table>
+
+<a name="__getitem__"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">__getitem__</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>item</span>)</span>
+    <br /><i>(Indexing operator)</i>
+  </h3>
+  <p>Retrieves the ith value from this node, or child nodes</p>
+  <p>If the subscript is a single number, it will be used as an index 
+  into this node's children list.</p>
+  If the subscript is a list or tuple, we recursively fetch the item 
+  by using the first element as an index into this node's children, the 
+  second element as an index into that child node's children, and so 
+  on
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="dump"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">dump</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>indent</span>=<span class=sig-default>0</span>)</span>
+  </h3>
+  For debugging - prints a recursive dump of a parse tree node and its 
+  children
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="toprettyxml"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">toprettyxml</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>indent</span>=<span class=sig-default>'&nbsp;&nbsp;'</span>,
+          <span class=sig-arg>newl</span>=<span class=sig-default>'\n'</span>,
+          <span class=sig-arg>encoding</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  returns a human-readable xml serialisation of this node and its 
+  children
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="toxml"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">toxml</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  <p>Returns an xml serialisation of this node and its children, as a raw 
+  string</p>
+  Called on the toplevel node, the xml is a representation of the 
+  entire parse tree.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="toxmldoc"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">toxmldoc</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Returns the node and its children as an xml.dom.minidom.Document 
+  object
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="toxmlelem"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">toxmlelem</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>docobj</span>)</span>
+  </h3>
+  Returns a DOM Element object of this node and its children
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+<br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="bison-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          PyBison&nbsp;API&nbsp;Reference
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.0 on Sun Jun 27 12:36:56 2004</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>

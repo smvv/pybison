@@ -1,0 +1,30 @@
+A slightly more powerful calculator that supports variables,
+plus some scientific functions like log(), sqr(), sin() etc.
+
+Most notably, this example demonstrates error handling.
+
+If/when one of your rule handlers comes across a condition
+which constitutes an error, but which the parser doesn't or can't
+pick up (eg division by zero), the handler should do:
+
+   return self.error("string-describing-the-error")
+
+This will cause the parser to go into error handling mode.
+
+Also, your rules can pick up errors, by using the magic
+target name 'error'. Within error handling code, the
+'lasterror' attribute of the parser object will be a
+3-tuple:
+
+ (line-num, msg, near-token)
+
+where:
+ - 'line-num' is the input line at which the error (most likely)
+   occured,
+
+ - 'msg' is the error message text (supplied by either your own
+   prior 'self.error(somestring)' call, or by the parser itself
+
+ - 'near-token' is a string, the input token which triggered the
+   error condition
+

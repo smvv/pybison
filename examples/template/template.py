@@ -1,0 +1,202 @@
+#!/usr/bin/env python
+"""
+Template of a pyBison parser file
+
+This is actually a working parser, but so
+minimal as to be totally useless. Refer to the
+'.on_someTarget()' rule handler in the class
+'Parser' below for more info.
+
+You can do much worse than to copy this file
+somewhere, and tinker away to your heart's content.
+"""
+
+import sys, traceback
+
+from bison import BisonParser, BisonNode
+
+# -------------------------------------------
+# Our own custom base class for all objects
+# which get inserted into the parse tree
+# -------------------------------------------
+
+class ParseNode(BisonNode):
+    """
+    This is the base class from which all your
+    parse nodes are derived.
+    Add methods to this class as you need them
+    """
+    def __init__(self, **kw):
+        BisonNode.__init__(self, **kw)
+
+    def __str__(self):
+        """Customise as needed"""
+        return "<%s instance at 0x%x>" % (self.__class__.__name__, hash(self))
+
+    def __repr__(self):
+        """Customise as needed"""
+        return str(self)
+
+    def dump(self, indent=0):
+        """
+        Dump out human-readable, indented parse tree
+        Customise as needed - here, or in the node-specific subclasses
+        """
+        BisonNode.dump(self, indent) # alter as needed
+
+# ----------------------------------------------------
+# Now, we need to define a node class for each parse
+# target. (This is completely optional, but it can
+# turn out to be a PITA if you don't).
+# ----------------------------------------------------
+
+class someTarget_Node(ParseNode):
+    """
+    Holds a "someTarget" parse target and its components.
+    """
+    def __init__(self, **kw):
+        ParseNode.__init__(self, **kw)
+
+    def dump(self, indent=0):
+        ParseNode.dump(self, indent)
+
+
+# ----------------------------------------------------
+# Now, at last, we get to the main Parser class itself
+# ----------------------------------------------------
+
+class Parser(BisonParser):
+    """
+    Describe your parser here
+    """
+
+    # basename of binary parser engine dynamic lib
+    bisonEngineLibName = "template-engine"
+
+    # ----------------------------------------------------------------
+    # lexer tokens - these must match those in your lex script (below)
+    # ----------------------------------------------------------------
+    tokens = [ 'WORD' ]
+
+    # ------------------------------
+    # precedences
+    # ------------------------------
+    precedences = (
+        #('left', ('aTarget1', 'aTarget2',..., 'aTargetn')),
+        #('right', ('another_target1', 'another_target2',..., 'another_targetn')),
+        )
+
+    # ---------------------------------------------------------------
+    # These methods are the python handlers for the bison targets.
+    # (which get called by the bison code each time the corresponding
+    # parse target is unambiguously reached)
+    #
+    # WARNING - don't touch the method docstrings unless you know what
+    # you are doing - they are in bison rule syntax, and are passed
+    # verbatim to bison to build the parser engine library.
+    # ---------------------------------------------------------------
+
+    # Declare the start target here (by name)
+    start = "someTarget"
+
+    def on_someTarget(self, target, option, names, values):
+        """
+        someTarget
+        :
+        | someTarget WORD
+        """
+        print "on_someTarget: %s %s" % (option, repr(values))
+        node = someTarget_Node(target=target,
+                               option=option,
+                               names=names,
+                               values=values)
+        return node
+
+    # -----------------------------------------
+    # raw lex script, verbatim here
+    #
+    # the script used here in this template is one which
+    # breaks up the input stream into strings of
+    # alphanumeric 'words' and discards everything else
+    # -----------------------------------------
+    lexscript = r"""
+%{
+#include <stdio.h>
+#include <string.h>
+#include "Python.h"
+#define YYSTYPE void *
+#include "tokens.h"
+int yylineno = 0;
+int yywrap() { return(1); }
+extern void *py_parser;
+extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
+#define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
+#define YY_INPUT(buf,result,max_size) { (*py_input)(py_parser, buf, &result, max_size); }
+%}
+
+%%
+
+[a-zA-Z0-9\.]+ { returntoken(WORD); }
+[ \t\n]        { /* ignore spaces/tabs/newlines */ }
+.              { printf("unknown char %c ignored\n", yytext[0]); /* ignore bad chars */}
+
+%%
+//yywrap() { return(1); }
+
+    """
+    # -----------------------------------------
+    # end raw lex script
+    # -----------------------------------------
+
+# --------------------------------------------------
+# global functions to add in unit-testing our parser
+# (same as what gets generated by bison2py)
+# --------------------------------------------------
+
+def usage():
+    print "%s: PyBison template parser" % sys.argv[0]
+    print "Usage: %s [-k] [-v] [-d] [filename]" % sys.argv[0]
+    print "  -k       Keep temporary files used in building parse engine lib"
+    print "  -v       Enable verbose messages while parser is running"
+    print "  -d       Enable garrulous debug messages from parser engine"
+    print "  filename path of a file to parse, defaults to stdin"
+
+def main(*args):
+    """
+    Unit-testing func
+    """
+
+    keepfiles = 0
+    verbose = 0
+    debug = 0
+    filename = None
+
+    for s in ["-h", "-help", "--h", "--help", "-?"]:
+        if s in args:
+            usage()
+            sys.exit(0)
+
+    if len(args) > 0:
+        if "-k" in args:
+            keepfiles = 1
+            args.remove("-k")
+        if "-v" in args:
+            verbose = 1
+            args.remove("-v")
+        if "-d" in args:
+            debug = 1
+            args.remove("-d")
+    if len(args) > 0:
+        filename = args[0]
+
+    p = Parser(verbose=verbose, keepfiles=keepfiles)
+
+    if filename == None:
+        print "(Reading from standard input - please type stuff)"
+
+    tree = p.run(file=filename, debug=debug)
+    return tree
+
+if __name__ == "__main__":
+    main(*(sys.argv[1:]))
+

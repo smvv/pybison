@@ -1,0 +1,12 @@
+The javaparser.l and javaparser.y files herein were NOT written by
+myself (David McNab).
+
+javaparser.l was taken almost verbatim from an apparently public
+domain version, found on the website of
+Professor Dave Binkley
+(http://www.cs.loyola.edu/~binkley/)
+at the Department of Computer Science at Loyola College in Maryland
+(http://www.cs.loyola.edu/)
+
+javaparser.y was taken almost verbatim from the source code to 
+the GNU gcj java compiler.

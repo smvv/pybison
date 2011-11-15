@@ -1,0 +1,7 @@
+This is a minimal calculator example, as discussed in the walkthrough
+document.
+
+Provided you have installed PyBison, running the run.py script should
+trigger the creation of the calc-parser.so parser engine lib, and
+run a calculator parser which accepts expressions you type in, and
+prints out results.

@@ -1,0 +1,28 @@
+INSTALL file for PyBison
+
+1. Prerequisites
+
+You will need:
+
+  - Python 2.2 or later, with development headers and libraries
+  - GNU bison (or yacc) - www.gnu.org or gnuwin32.sf.net
+  - GNU flex (or lex) - ditto
+  - The Pyrex Python/C wrapper creation framework:
+      - http://www.cosc.canterbury.ac.nz/~greg/python/Pyrex/
+  - A standard C compiler and linker
+
+2. Installing
+
+  - Crack the tarball somewhere convenient (eg your home directory)
+  - cd into the top level directory of this package
+  - become root, and type 'python setup.py install'
+
+With all going well, you should see a bunch of harmless warning messages
+from the compilation of bison.c, but no errors.
+
+The following commands will verify if the installation succeeded:
+
+  $ which bison2py
+  /usr/bin/bison2py
+  $ python -c "import bison"
+  $

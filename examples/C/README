@@ -1,0 +1,16 @@
+This is a parser for ANSI C code.
+
+To generate your python parser, type:
+  bison2py c
+or, if you want parse node classes to be generated as well:
+  bison2py c -c
+
+Either of those commands will generate an executable c.py file,
+containing a Parser class, plus unit test code which by default
+reads C source from stdin.
+
+Grammar and scanner scripts were sourced from:
+
+  * http://www.lysator.liu.se/c/ANSI-C-grammar-y.html
+  * http://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+
