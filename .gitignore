@@ -1,0 +1,6 @@
+*.sw[a-z]
+*.pyc
+build/
+src/pyrex/bison_.c
+src/pyrex/bison_.h
+
