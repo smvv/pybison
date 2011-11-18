@@ -243,7 +243,10 @@ class BisonParser(object):
     flexCFile1 = "tmp.lex.c" # c output file from lex gets renamed to this
 
     cflags_pre = ['-fPIC']  # = CFLAGS added before all arguments.
-    cflags_post = ['-O3','-g']  # = CFLAGS added after all arguments.
+    cflags_post = ['-O0','-g']  # = CFLAGS added after all arguments.
+
+    buildDirectory = './' # Directory used to store the generated / compiled files.
+    debugSymbols = 1  # Add debugging symbols to the binary files.
     
     verbose = 0
     
@@ -324,17 +327,23 @@ class BisonParser(object):
         Tries to dispatch to on_TargetName() methods if they exist,
         otherwise wraps the target in a BisonNode object
         """
-        handler = getattr(self, "on_"+targetname, None)
+        handler = getattr(self, 'on_'+targetname, None)
         if handler:
             if self.verbose:
                 try:
                     hdlrline = handler.func_code.co_firstlineno
                 except:
                     hdlrline = handler.__init__.func_code.co_firstlineno
-                print "invoking handler at line %s for %s" % (hdlrline, targetname)
-            self.last = handler(target=targetname, option=option, names=names, values=values)
-            if self.verbose:
-                print "handler for %s returned %s" % (targetname, repr(self.last))
+
+                print '_handle: invoking handler at line %s for "%s"' \
+                      % (hdlrline, targetname)
+
+            print handler
+            self.last = handler(target=targetname, option=option, names=names,
+                                values=values)
+            #if self.verbose:
+            #    print 'handler for %s returned %s' \
+            #          % (targetname, repr(self.last))
         else:
             if self.verbose:
                 print "no handler for %s, using default" % targetname
@@ -607,8 +616,8 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         prologue, rulesRaw, epilogue = rawBison.split("\n%%\n")
     except:
         raise Exception(
-            "File "+bisonfileName+" is not a properly formatted bison file"+\
-            " (needs 3 sections separated by %%%%"
+            "File %s is not a properly formatted bison file"
+            " (needs 3 sections separated by %%%%" % (bisonfileName)
             )
     
     # --------------------------------------
@@ -791,7 +800,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         '    # --------------------------------------------',
         '    # basename of binary parser engine dynamic lib',
         '    # --------------------------------------------',
-        '    bisonEngineLibName = "%s"' % libfileName,
+        '    bisonEngineLibName = "%s"' % (parser.buildDirectory + libfileName),
         '\n',
         ]))
 

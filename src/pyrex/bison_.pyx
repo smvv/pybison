@@ -71,9 +71,10 @@ cdef extern from "../c/bisondynlib.h":
 # Callback function which is invoked by target handlers
 # within the C yyparse() function.
 
-cdef public object py_callback(object parser, char *target, int option, int nargs, void *args,...):
-    cdef int *pargs
-    pargs = <int *>(&args)
+cdef public object py_callback(object parser, char *target, int option, \
+        int nargs, void *args):
+    #cdef int *pargs
+    #pargs = <int *>(&args)
     cdef void *objptr
     cdef object obj
     cdef int i
@@ -81,23 +82,38 @@ cdef public object py_callback(object parser, char *target, int option, int narg
     cdef void *val
     cdef char *tokval
 
-    try:
-        names = PyList_New(nargs)
-        values = PyList_New(nargs)
-        for i in range(nargs):
-            termname = <char *>(pargs[i*2])
-            val = <void *>(pargs[i*2+1])
-            valobj = <object>val
+    if parser.verbose:
+        print 'py_callback: called with nargs=%d' % nargs
 
-            Py_INCREF(termname)
-            Py_INCREF(valobj)
-            PyList_SetItem(names, i, termname)
-            PyList_SetItem(values, i, valobj)
-    
+    try:
+        names = PyList_New(0)
+        values = PyList_New(0)
+        #names = PyList_New(nargs)
+        #values = PyList_New(nargs)
+
+        #for i in range(nargs):
+        #    print 'i:', i
+
+        #    termname = <char *>(pargs[i*2])
+        #    Py_INCREF(termname)
+        #    print 'termname:', termname
+        #    PyList_SetItem(names, i, termname)
+
+        #    val = <void *>(pargs[i*2+1])
+        #    valobj = <object>val
+        #    Py_INCREF(valobj)
+        #    print 'valobj:', valobj
+        #    PyList_SetItem(values, i, valobj)
+
         if parser.verbose:
-            print "py_callback: calling handler for %s" % PyString_FromString(target)
-    
+            print 'py_callback: calling handler for target "%s"' % target
+            print 'py_callback: with args:', (target, option, names, values)
+
         res = parser._handle(target, option, names, values)
+
+        if parser.verbose:
+            print 'py_callback: handler returned:', res
+
         return res
     except:
         traceback.print_exc()
@@ -110,17 +126,22 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     cdef char *buf1
     cdef int buflen
 
-    #print "py_input: want to read up to %s bytes" % max_size
+    if parser.verbose:
+        print "\npy_input: want to read up to %s bytes" % max_size
+
     raw = parser.read(max_size)
     buflen = PyInt_AsLong(len(raw))
     result[0] = buflen
     memcpy(buf, PyString_AsString(raw), buflen)
-    #print "py_input: got %s bytes" % buflen
+
+    if parser.verbose:
+        print "\npy_input: got %s bytes" % buflen
 
 
 #@-node:py_input
 #@+node:Python imports
 import sys, os, sha, re, imp, traceback
+import shutil
 import distutils.sysconfig
 import distutils.ccompiler
 
@@ -180,7 +201,9 @@ cdef class ParserEngine:
         """
         self.parser = parser
         
-        self.libFilename_py = parser.bisonEngineLibName + imp.get_suffixes()[0][0]
+        self.libFilename_py = parser.buildDirectory \
+                              + parser.bisonEngineLibName \
+                              + imp.get_suffixes()[0][0]
     
         self.parserHash = hashParserObject(self.parser)
     
@@ -257,7 +280,7 @@ cdef class ParserEngine:
     
         if parser.verbose:
             print "Successfully loaded library"
-    
+
     #@-node:openLib
     #@+node:buildLib
     def buildLib(self):
@@ -277,7 +300,8 @@ cdef class ParserEngine:
         # rip the pertinent grammar specs from parser class
         parser = self.parser
     
-        # get target handler methods, in the order of appearance in the source file
+        # get target handler methods, in the order of appearance in the source
+        # file.
         attribs = dir(parser)
         gHandlers = []
         for a in attribs:
@@ -291,14 +315,18 @@ cdef class ParserEngine:
         gTokens = parser.tokens
         gPrecedences = parser.precedences
         gLex = parser.lexscript
-        
+
+        buildDirectory = parser.buildDirectory
+
         # ------------------------------------------------
         # now, can generate the grammar file
-        try:
-            os.unlink(parser.bisonFile)
-        except:
-            pass
-        f = open(parser.bisonFile, "w")
+        if os.path.isfile(buildDirectory + parser.bisonFile):
+            os.unlink(buildDirectory + parser.bisonFile)
+
+        if parser.verbose:
+            print 'generating bison file:', buildDirectory + parser.bisonFile
+
+        f = open(buildDirectory + parser.bisonFile, "w")
         write = f.write
         writelines = f.writelines
         
@@ -321,35 +349,35 @@ cdef class ParserEngine:
             "%}",
             '',
             ]))
-        
+
         # write out tokens and start target dec
         write("%%token %s\n\n" % " ".join(gTokens))
         write("%%start %s\n\n" % gStart)
-        
+
         # write out precedences
         for p in gPrecedences:
             write("%%%s  %s\n" % (p[0], " ".join(p[1])))
-        
+
         write("\n\n%%\n\n")
-    
+
         # carve up docstrings
         rules = []
         for h in gHandlers:
-    
+
             doc = h.__doc__.strip()
-    
+
             # added by Eugene Oden
             #target, options = doc.split(":")
             doc = re.sub(unquoted % ";", "", doc)
-    
+
             #print "---------------------"
-    
+
             s = re.split(unquoted % ":", doc)
             #print "s=%s" % s
-    
+
             target, options = s
             target = target.strip()
-    
+
             options = options.strip()
             tmp = []
     
@@ -466,59 +494,70 @@ cdef class ParserEngine:
     
         # -----------------------------------------------
         # now generate the lex script
-        try:
-            os.unlink(parser.flexFile)
-        except:
-            pass
+        if os.path.isfile(buildDirectory + parser.flexFile):
+            os.unlink(buildDirectory + parser.flexFile)
+
         lexLines = gLex.split("\n")
         tmp = []
         for line in lexLines:
             tmp.append(line.strip())
-        f = open(parser.flexFile, "w")
+        f = open(buildDirectory + parser.flexFile, "w")
         f.write("\n".join(tmp) + "\n")
         f.close()
-    
+
         # create and set up a compiler object
         ccompiler = distutils.ccompiler.new_compiler(verbose=parser.verbose)
         ccompiler.set_include_dirs([distutils.sysconfig.get_python_inc()])
-    
+
         # -----------------------------------------
         # Now run bison on the grammar file
         #os.system("bison -d tmp.y")
-        bisonCmd = parser.bisonCmd + [parser.bisonFile]
+        bisonCmd = parser.bisonCmd + [buildDirectory + parser.bisonFile]
+
         if parser.verbose:
-            print "bisonCmd=%s" % repr(bisonCmd)
+            print 'bison cmd:', ' '.join(bisonCmd)
+
         ccompiler.spawn(bisonCmd)
-    
+
         if parser.verbose:
             print "renaming bison output files"
-            print parser.bisonCFile, "=>", parser.bisonCFile1
-            print parser.bisonHFile, "=>", parser.bisonHFile1
-    
-        try:
-            os.unlink(parser.bisonCFile1)
-        except:
-            pass
-        os.rename(parser.bisonCFile, parser.bisonCFile1)
-        try:
-            os.unlink(parser.bisonHFile1)
-        except:
-            pass
-        os.rename(parser.bisonHFile, parser.bisonHFile1)
-        
+            print '%s => %s%s' % (parser.bisonCFile, buildDirectory,
+                                  parser.bisonCFile1)
+            print '%s => %s%s' % (parser.bisonHFile, buildDirectory,
+                                  parser.bisonHFile1)
+
+        if os.path.isfile(buildDirectory + parser.bisonCFile1):
+            os.unlink(buildDirectory + parser.bisonCFile1)
+
+        shutil.copy(parser.bisonCFile, buildDirectory + parser.bisonCFile1)
+
+        if os.path.isfile(buildDirectory + parser.bisonHFile1):
+            os.unlink(buildDirectory + parser.bisonHFile1)
+
+        shutil.copy(parser.bisonHFile, buildDirectory + parser.bisonHFile1)
+
         # -----------------------------------------
         # Now run lex on the lex file
         #os.system("lex tmp.l")
-        ccompiler.spawn(parser.flexCmd + [parser.flexFile])
-        try:
-            os.unlink(parser.flexCFile1)
-        except:
-            pass
-        os.rename(parser.flexCFile, parser.flexCFile1)
-    
+        flexCmd = parser.flexCmd + [buildDirectory + parser.flexFile]
+
+        if parser.verbose:
+            print 'flex cmd:', ' '.join(flexCmd)
+
+        ccompiler.spawn(flexCmd)
+
+        if os.path.isfile(buildDirectory + parser.flexCFile1):
+            os.unlink(buildDirectory + parser.flexCFile1)
+
+        if parser.verbose:
+            print '%s => %s%s' % (parser.flexCFile, buildDirectory,
+                                  parser.flexCFile1)
+
+        shutil.copy(parser.flexCFile, buildDirectory + parser.flexCFile1)
+
         # -----------------------------------------
         # Now compile the files into a shared lib
-    
+
         # compile bison and lex c sources
         #bisonObj = ccompiler.compile([parser.bisonCFile1])
         #lexObj = ccompiler.compile([parser.flexCFile1])
@@ -528,17 +567,23 @@ cdef class ParserEngine:
         #           extra_preargs=['/DWIN32', '/G4', '/Gs', '/Oit', '/MT', '/nologo', '/W3', '/WX', '/Id:\python23\include'])
     
         # link 'em into a shared lib
-        objs = ccompiler.compile([parser.bisonCFile1, parser.flexCFile1],
+        objs = ccompiler.compile([buildDirectory + parser.bisonCFile1,
+                                  buildDirectory + parser.flexCFile1],
                                  extra_preargs=parser.cflags_pre,
-                                 extra_postargs=parser.cflags_post)
-        libFileName = parser.bisonEngineLibName+imp.get_suffixes()[0][0]
+                                 extra_postargs=parser.cflags_post,
+                                 debug=parser.debugSymbols)
+        libFileName = buildDirectory + parser.bisonEngineLibName \
+                      + imp.get_suffixes()[0][0]
+
         if os.path.isfile(libFileName+".bak"):
-            try:
-                os.unlink(libFileName+".bak")
-            except:
-                pass
+            os.unlink(libFileName+".bak")
+
         if os.path.isfile(libFileName):
             os.rename(libFileName, libFileName+".bak")
+
+        if parser.verbose:
+            print 'linking: %s => %s' % (', '.join(objs), libFileName)
+
         ccompiler.link_shared_object(objs, libFileName)
     
         #incdir = PyString_AsString(get_python_inc())
@@ -547,14 +592,15 @@ cdef class ParserEngine:
         # --------------------------------------------
         # clean up, if we succeeded
         hitlist = objs[:]
-        hitlist.append("tmp.output")
+        hitlist.append(buildDirectory + "tmp.output")
+
         if os.path.isfile(libFileName):
             for name in ['bisonFile', 'bisonCFile', 'bisonHFile',
                          'bisonCFile1', 'bisonHFile1', 'flexFile',
                          'flexCFile', 'flexCFile1',
                          ] + objs:
                 if hasattr(parser, name):
-                    fname = getattr(parser, name)
+                    fname = buildDirectory + getattr(parser, name)
                 else:
                     fname = None
                 #print "want to delete %s" % fname
@@ -582,22 +628,24 @@ cdef class ParserEngine:
         Runs the binary parser engine, as loaded from the lib
         """
         cdef void *handle
-    
+
         cdef void *cbvoid
         cdef void *invoid
-    
+
         handle = self.libHandle
         parser = self.parser
-    
+
         cbvoid = <void *>py_callback
         invoid = <void *>py_input
-    
+
         if parser.verbose:
             print "runEngine: about to call, py_input=0x%lx..." % (<int>invoid)
+
         return bisondynlib_run(handle, parser, cbvoid, invoid, debug)
+
         if parser.verbose:
             print "runEngine: back from parser"
-    
+
     #@-node:runEngine
     #@+node:__del__
     def __del__(self):
