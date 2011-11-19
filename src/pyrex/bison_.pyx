@@ -1,10 +1,7 @@
-#@+leo-ver=4
-#@+node:@file src/pyrex/bison_.pyx
 """
 Pyrex-generated portion of pybison
 """
-#@+others
-#@+node:python
+
 cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *, int)
     object PyString_FromString(char *)
@@ -25,8 +22,6 @@ cdef extern from "Python.h":
     object PyObject_CallObject(object callable_object, object args)
     int PyObject_SetAttrString(object o, char *attr_name, object v)
 
-#@-node:python
-#@+node:libdl
 # use libdl for now - easy and simple - maybe switch to
 # glib or libtool if a keen windows dev sends in a patch
 
@@ -43,18 +38,12 @@ cdef extern from "Python.h":
 #        RTLD_NOLOAD
 #        RTLD_GLOBAL
 
-
-#@-node:libdl
-#@+node:stdio.h
 cdef extern from "stdio.h":
     int printf(char *format,...)
 
-#@-node:stdio.h
-#@+node:string.h
 cdef extern from "string.h":
     void *memcpy(void *dest, void *src, long n)
-#@-node:string.h
-#@+node:bisondynlib.h
+
 cdef extern from "../c/bisondynlib.h":
     void *bisondynlib_open(char *filename)
     int bisondynlib_close(void *handle)
@@ -65,62 +54,74 @@ cdef extern from "../c/bisondynlib.h":
 
     #int bisondynlib_build(char *libName, char *includedir)
 
+cdef extern from "stdarg.h":
+    ctypedef struct va_list:
+        pass
+    ctypedef struct fake_type:
+        pass
+    void va_start(va_list, void* arg)
+    void* va_arg(va_list, fake_type)
+    void va_end(va_list)
+    fake_type void_type "void *"
+    fake_type str_type "char *"
 
-#@-node:bisondynlib.h
-#@+node:py_callback
 # Callback function which is invoked by target handlers
 # within the C yyparse() function.
 
 cdef public object py_callback(object parser, char *target, int option, \
-        int nargs, void *args):
-    #cdef int *pargs
-    #pargs = <int *>(&args)
+        int nargs, ...):
+
+    cdef int i
+    cdef va_list ap
+    va_start(ap, <void*>nargs)
+
     cdef void *objptr
     cdef object obj
-    cdef int i
     cdef object valobj
     cdef void *val
     cdef char *tokval
+    cdef char *termname
 
-    if parser.verbose:
-        print 'py_callback: called with nargs=%d' % nargs
+    #if parser.verbose:
+    #    print 'py_callback: called with nargs=%d' % nargs
 
     try:
-        names = PyList_New(0)
-        values = PyList_New(0)
-        #names = PyList_New(nargs)
-        #values = PyList_New(nargs)
+        names = PyList_New(nargs)
+        values = PyList_New(nargs)
+
+        Py_INCREF(names)
+        Py_INCREF(values)
 
         #for i in range(nargs):
-        #    print 'i:', i
+        #    print 'i=%d' % i , <char*>va_arg(ap, str_type), \
+        #                       hex(<int>va_arg(ap, str_type))
 
-        #    termname = <char *>(pargs[i*2])
-        #    Py_INCREF(termname)
-        #    print 'termname:', termname
-        #    PyList_SetItem(names, i, termname)
+        for i in range(nargs):
+            termname = <char*>va_arg(ap, str_type)
+            Py_INCREF(termname)
+            PyList_SetItem(names, i, termname)
 
-        #    val = <void *>(pargs[i*2+1])
-        #    valobj = <object>val
-        #    Py_INCREF(valobj)
-        #    print 'valobj:', valobj
-        #    PyList_SetItem(values, i, valobj)
+            val = <void *>va_arg(ap, void_type)
+            valobj = <object>val
+            Py_INCREF(valobj)
+            PyList_SetItem(values, i, valobj)
 
-        if parser.verbose:
-            print 'py_callback: calling handler for target "%s"' % target
-            print 'py_callback: with args:', (target, option, names, values)
+        #if parser.verbose:
+        #    print 'py_callback: calling handler:', \
+        #          (target, option, names, values)
 
         res = parser._handle(target, option, names, values)
 
-        if parser.verbose:
-            print 'py_callback: handler returned:', res
-
-        return res
+        #if parser.verbose:
+        #    print 'py_callback: handler returned:', res
     except:
         traceback.print_exc()
-        return None
+        res = None
 
-#@-node:py_callback
-#@+node:py_input
+    va_end(ap)
+
+    return res
+
 # callback routine for reading input
 cdef public void py_input(object parser, char *buf, int *result, int max_size):
     cdef char *buf1
@@ -138,28 +139,22 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
         print "\npy_input: got %s bytes" % buflen
 
 
-#@-node:py_input
-#@+node:Python imports
 import sys, os, sha, re, imp, traceback
 import shutil
 import distutils.sysconfig
 import distutils.ccompiler
 
 
-#@-node:Python imports
-#@+node:Python Globals
 reSpaces = re.compile("\\s+")
 
 #unquoted = r"""^|[^'"]%s[^'"]?"""
 unquoted = "[^'\"]%s[^'\"]?"
 
-#@-node:Python Globals
-#@+node:cdef class ParserEngine
 cdef class ParserEngine:
     """
-    Wraps the interface to the binary bison/lex-generated
-    parser engine dynamic library.
-    
+    Wraps the interface to the binary bison/lex-generated parser engine dynamic
+    library.
+
     You shouldn't need to deal with this at all.
 
     Takes care of:
@@ -171,61 +166,53 @@ cdef class ParserEngine:
     Makes direct calls to the platform-dependent routines in 
     bisondynlib-[linux|windows].c
     """
-    #@    @+others
-    #@+node:C attribs
     cdef object parser
     cdef object parserHash # hash of current python parser object
     cdef object libFilename_py
-    
+
     cdef void *libHandle
-    
+
     # rules hash str embedded in bison parser lib
     cdef char *libHash
-    
-    #@-node:C attribs
-    #@+node:__init__
+
     def __init__(self, parser, **kw):
         """
-        Creates a ParserEngine wrapper, and builds/loads the library
-        
+        Creates a ParserEngine wrapper, and builds/loads the library.
+
         Arguments:
             - parser - an instance of a subclass of Parser
-    
-        In the course of initialisation, we check the library
-        against the parser object's rules. If the lib doesn't
-        exist, or can't be loaded, or doesn't match, we build
-        a new library.
-        
-        Either way, we end up with a binary parser engine which
-        matches the current rules in the parser object
+
+        In the course of initialisation, we check the library against the
+        parser object's rules. If the lib doesn't exist, or can't be loaded, or
+        doesn't match, we build a new library.
+
+        Either way, we end up with a binary parser engine which matches the
+        current rules in the parser object.
         """
         self.parser = parser
-        
+
         self.libFilename_py = parser.buildDirectory \
                               + parser.bisonEngineLibName \
                               + imp.get_suffixes()[0][0]
-    
+
         self.parserHash = hashParserObject(self.parser)
-    
+
         self.openCurrentLib()
-    
-    #@-node:__init__
-    #@+node:openCurrentLib
+
     def openCurrentLib(self):
         """
-        Tests if library exists and is current.
-        If not, builds a fresh one
-        
-        Opens the library and imports the parser entry point
+        Tests if library exists and is current. If not, builds a fresh one.
+
+        Opens the library and imports the parser entry point.
         """
         parser = self.parser
         verbose = parser.verbose
-    
+
         if not os.path.isfile(self.libFilename_py):
             self.buildLib()
-        
+
         self.openLib()
-    
+
         # hash our parser spec, compare to hash val stored in lib
         libHash = PyString_FromString(self.libHash)
         if self.parserHash != libHash:
@@ -239,19 +226,18 @@ cdef class ParserEngine:
         else:
             if verbose:
                 print "Hashes match, no need to rebuild bison engine lib"
-    #@-node:openCurrentLib
-    #@+node:openLib
+
     def openLib(self):
         """
-        Loads the parser engine's dynamic library,
-        and extracts the following symbols:
-    
+        Loads the parser engine's dynamic library, and extracts the following
+        symbols:
+
             - void *do_parse() (runs parser)
             - char *parserHash (contains hash of python parser rules)
-    
+
         Returns lib handle, plus pointer to do_parse() function, as long ints
         (which later need to be cast to pointers)
-    
+
         Important note -this is totally linux-specific.
         If you want windows support, you'll have to modify these funcs to
         use glib instead (or create windows equivalents), in which case I'd
@@ -341,7 +327,7 @@ cdef class ParserEngine:
             "extern char *yytext;",
             "#define YYSTYPE void*",
             #'extern void *py_callback(void *, char *, int, void*, ...);',
-            'void *(*py_callback)(void *, char *, int, int, void *, ...);',
+            'void *(*py_callback)(void *, char *, int, int, ...);',
             'void (*py_input)(void *, char *, int *, int);',
             'void *py_parser;',
             'char *rules_hash = "%s";' % self.parserHash,

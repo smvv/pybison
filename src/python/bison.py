@@ -243,7 +243,7 @@ class BisonParser(object):
     flexCFile1 = "tmp.lex.c" # c output file from lex gets renamed to this
 
     cflags_pre = ['-fPIC']  # = CFLAGS added before all arguments.
-    cflags_post = ['-O0','-g']  # = CFLAGS added after all arguments.
+    cflags_post = ['-O3','-g']  # = CFLAGS added after all arguments.
 
     buildDirectory = './' # Directory used to store the generated / compiled files.
     debugSymbols = 1  # Add debugging symbols to the binary files.
@@ -338,7 +338,6 @@ class BisonParser(object):
                 print '_handle: invoking handler at line %s for "%s"' \
                       % (hdlrline, targetname)
 
-            print handler
             self.last = handler(target=targetname, option=option, names=names,
                                 values=values)
             #if self.verbose:
