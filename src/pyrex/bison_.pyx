@@ -54,6 +54,7 @@ cdef extern from "../c/bisondynlib.h":
 
     #int bisondynlib_build(char *libName, char *includedir)
 
+# Definitions for variadic functions (e.g. py_callback).
 cdef extern from "stdarg.h":
     ctypedef struct va_list:
         pass
@@ -163,7 +164,7 @@ cdef class ParserEngine:
         - calling the entry point
         - closing the library
 
-    Makes direct calls to the platform-dependent routines in 
+    Makes direct calls to the platform-dependent routines in
     bisondynlib-[linux|windows].c
     """
     cdef object parser
@@ -246,12 +247,12 @@ cdef class ParserEngine:
         cdef char *libFilename
         cdef char *err
         cdef void *handle
-    
+
         # convert python filename string to c string
         libFilename = PyString_AsString(self.libFilename_py)
-        
+
         parser = self.parser
-        
+
         if parser.verbose:
             print "Opening library %s" % self.libFilename_py
         handle = bisondynlib_open(libFilename)
@@ -260,19 +261,17 @@ cdef class ParserEngine:
         if err:
             printf("ParserEngine.openLib: error '%s'\n", err)
             return
-    
+
         # extract symbols
         self.libHash = bisondynlib_lookup_hash(handle)
-    
+
         if parser.verbose:
             print "Successfully loaded library"
 
-    #@-node:openLib
-    #@+node:buildLib
     def buildLib(self):
         """
         Creates the parser engine lib
-        
+
         This consists of:
             1. Ripping the tokens list, precedences, start target, handler docstrings
                and lex script from this Parser instance's attribs and methods
@@ -281,11 +280,11 @@ cdef class ParserEngine:
             4. Compiling the C files, and link into a dynamic lib
         """
         cdef char *incdir
-    
+
         # -------------------------------------------------
         # rip the pertinent grammar specs from parser class
         parser = self.parser
-    
+
         # get target handler methods, in the order of appearance in the source
         # file.
         attribs = dir(parser)
@@ -295,7 +294,7 @@ cdef class ParserEngine:
                 method = getattr(parser, a)
                 gHandlers.append(method)
         gHandlers.sort(cmpLines)
-    
+
         # get start symbol, tokens, precedences, lex script
         gStart = parser.start
         gTokens = parser.tokens
@@ -315,7 +314,7 @@ cdef class ParserEngine:
         f = open(buildDirectory + parser.bisonFile, "w")
         write = f.write
         writelines = f.writelines
-        
+
         # grammar file prologue
         write("\n".join([
             "%{",
@@ -366,7 +365,7 @@ cdef class ParserEngine:
 
             options = options.strip()
             tmp = []
-    
+
             #print "options = %s" % repr(options)
             opts = options.split("|")
             #print "opts = %s" % repr(opts)
@@ -374,15 +373,15 @@ cdef class ParserEngine:
             #print "r = <%s>" % r
             opts1 = re.split(r, " " + options)
             #print "opts1 = %s" % repr(opts1)
-    
+
             for o in opts1:
                 o = o.strip()
-    
+
                 tmp.append(reSpaces.split(o))
             options = tmp
-    
+
             rules.append((target, options))
-    
+
         # and render rules to grammar file
         for rule in rules:
             try:
@@ -409,19 +408,19 @@ cdef class ParserEngine:
                                 i = i - 1
                                 break # hack for rules using '%prec'
                             args.append('"%s", $%d' % (option[i], i+1))
-        
+
                     # now, we have the correct terms count
                     action = action % (i + 1)
-    
+
                     # assemble the full rule + action, ad to list
                     action = action + ",\n            "
                     action = action + ",\n            ".join(args) + "\n            );\n"
-    
+
                     if 'error' in option:
                         action = action + "             PyObject_SetAttrString(py_parser, \"lasterror\", Py_None);\n"
                         action = action + "             Py_INCREF(Py_None);\n"
                         action = action + "             yyclearin;\n"
-    
+
                     action = action + "          if (PyObject_HasAttrString($$, \"_pyBisonError\"))\n"
                     action = action + "          {\n"
                     action = action + "             yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, \"lasterror\")));\n"
@@ -434,9 +433,9 @@ cdef class ParserEngine:
                 write("    | ".join(options) + "    ;\n\n")
             except:
                 traceback.print_exc()
-    
+
         write("\n\n%%\n\n")
-    
+
         # now generate C code
         epilogue = "\n".join([
             'void do_parse(void *parser1,',
@@ -474,10 +473,10 @@ cdef class ParserEngine:
             "}",
             ]) + "\n"
         write(epilogue)
-    
+
         # done with grammar file
         f.close()
-    
+
         # -----------------------------------------------
         # now generate the lex script
         if os.path.isfile(buildDirectory + parser.flexFile):
@@ -547,11 +546,11 @@ cdef class ParserEngine:
         # compile bison and lex c sources
         #bisonObj = ccompiler.compile([parser.bisonCFile1])
         #lexObj = ccompiler.compile([parser.flexCFile1])
-    
+
         #cl /DWIN32 /G4 /Gs /Oit /MT /nologo /W3 /WX bisondynlib-win32.c /Id:\python23\include
-        #cc.compile(['bisondynlib-win32.c'], 
+        #cc.compile(['bisondynlib-win32.c'],
         #           extra_preargs=['/DWIN32', '/G4', '/Gs', '/Oit', '/MT', '/nologo', '/W3', '/WX', '/Id:\python23\include'])
-    
+
         # link 'em into a shared lib
         objs = ccompiler.compile([buildDirectory + parser.bisonCFile1,
                                   buildDirectory + parser.flexCFile1],
@@ -571,10 +570,10 @@ cdef class ParserEngine:
             print 'linking: %s => %s' % (', '.join(objs), libFileName)
 
         ccompiler.link_shared_object(objs, libFileName)
-    
+
         #incdir = PyString_AsString(get_python_inc())
         #bisondynlib_build(self.libFilename_py, incdir)
-    
+
         # --------------------------------------------
         # clean up, if we succeeded
         hitlist = objs[:]
@@ -598,17 +597,13 @@ cdef class ParserEngine:
                     os.unlink(f)
                 except:
                     print "Warning: failed to delete temporary file %s" % f
-    
-    
-    #@-node:buildLib
-    #@+node:closeLib
+
     def closeLib(self):
         """
         Does the necessary cleanups and closes the parser library
         """
         bisondynlib_close(self.libHandle)
-    #@-node:closeLib
-    #@+node:runEngine
+
     def runEngine(self, debug=0):
         """
         Runs the binary parser engine, as loaded from the lib
@@ -624,25 +619,15 @@ cdef class ParserEngine:
         cbvoid = <void *>py_callback
         invoid = <void *>py_input
 
-        if parser.verbose:
-            print "runEngine: about to call, py_input=0x%lx..." % (<int>invoid)
-
         return bisondynlib_run(handle, parser, cbvoid, invoid, debug)
 
-        if parser.verbose:
-            print "runEngine: back from parser"
-
-    #@-node:runEngine
-    #@+node:__del__
     def __del__(self):
         """
         Clean up and bail
         """
         self.closeLib()
-    #@-node:__del__
-    #@-others
-#@-node:cdef class ParserEngine
-#@+node:cmpLines
+
+
 def cmpLines(meth1, meth2):
     """
     Used as a sort() argument for sorting parse target handler methods by
@@ -654,30 +639,29 @@ def cmpLines(meth1, meth2):
     except:
         line1 = meth1.__init__.func_code.co_firstlineno
         line2 = meth2.__init__.func_code.co_firstlineno
-        
+
     return cmp(line1, line2)
 
-#@-node:cmpLines
-#@+node:hashParserObject
+
 def hashParserObject(parser):
     """
     Calculates an sha1 hex 'hash' of the lex script
     and grammar rules in a parser class instance.
-    
+
     This is based on the raw text of the lex script attribute,
     and the grammar rule docstrings within the handler methods.
-    
+
     Used to detect if someone has changed any grammar rules or
     lex script, and therefore, whether a shared parser lib rebuild
     is required.
     """
     hasher = sha.new()
-    
+
     # add the lex script
     hasher.update(parser.lexscript)
 
     # add the tokens
-    
+
     # workaround pyrex weirdness
     tokens = list(parser.tokens)
     hasher.update(",".join(list(parser.tokens)))
@@ -685,7 +669,7 @@ def hashParserObject(parser):
     # add the precedences
     for direction, tokens in parser.precedences:
         hasher.update(direction + "".join(tokens))
-        
+
     # extract the parser target handler names
     handlerNames = dir(parser)
 
@@ -706,18 +690,11 @@ def hashParserObject(parser):
         if callable(attr):
             tmp.append(attr)
     handlers = tmp
-    
+
     # now add in the methods' docstrings
     for h in handlers:
         docString = h.__doc__
         hasher.update(docString)
-    
+
     # done
     return hasher.hexdigest()
-
-
-
-#@-node:hashParserObject
-#@-others
-#@-node:@file src/pyrex/bison_.pyx
-#@-leo

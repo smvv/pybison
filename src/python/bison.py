@@ -52,13 +52,13 @@ class BisonError:
 class BisonNode:
     """
     Generic class for wrapping parse targets.
-    
+
     Arguments:
         - targetname - the name of the parse target being wrapped.
         - items - optional - a list of items comprising a clause
           in the target rule - typically this will only be used
           by the PyBison callback mechanism.
-    
+
     Keywords:
         - any keywords you want (except 'items'), with any type of value.
           keywords will be stored as attributes in the constructed object.
@@ -66,37 +66,37 @@ class BisonNode:
     #@    @+others
     #@+node:__init__
     def __init__(self, **kw):
-    
+
         self.__dict__.update(kw)
-    
+
         # ensure some default attribs
         self.target = kw.get('target', 'UnnamedTarget')
         self.names = kw.get('names', [])
         self.values = kw.get('values', [])
         self.option = kw.get('option', 0)
-    
+
         # mirror this dict to simplify dumping
         self.kw = kw
-    
+
     #@-node:__init__
     #@+node:__str__
     def __str__(self):
         return "<BisonNode:%s>" % self.target
-    
+
     #@-node:__str__
     #@+node:__repr__
     def __repr__(self):
         return str(self)
-    
+
     #@-node:__repr__
     #@+node:__getitem__
     def __getitem__(self, item):
         """
         Retrieves the ith value from this node, or child nodes
-        
+
         If the subscript is a single number, it will be used as an
         index into this node's children list.
-        
+
         If the subscript is a list or tuple, we recursively fetch
         the item by using the first element as an index into this
         node's children, the second element as an index into that
@@ -113,7 +113,7 @@ class BisonNode:
     #@-node:__getitem__
     #@+node:__len__
     def __len__(self):
-        
+
         return len(self.values)
     #@-node:__len__
     #@+node:__getslice__
@@ -133,7 +133,7 @@ class BisonNode:
         indents = " " * indent * 2
         #print "%s%s: %s %s" % (indents, self.target, self.option, self.names)
         print "%s%s:" % (indents, self.target)
-    
+
         for name, val in self.kw.items() + zip(self.names, self.values):
             if name in specialAttribs or name.startswith("_"):
                 continue
@@ -141,18 +141,18 @@ class BisonNode:
                 val.dump(indent+1)
             else:
                 print indents + "  %s=%s" % (name, val)
-    
+
     #@-node:dump
     #@+node:toxml
     def toxml(self):
         """
         Returns an xml serialisation of this node and its children, as a raw string
-    
+
         Called on the toplevel node, the xml is a representation of the
         entire parse tree.
         """
         return self.toxmldoc().toxml()
-    
+
     #@-node:toxml
     #@+node:toprettyxml
     def toprettyxml(self, indent='  ', newl='\n', encoding=None):
@@ -162,7 +162,7 @@ class BisonNode:
         return self.toxmldoc().toprettyxml(indent=indent,
                                            newl=newl,
                                            encoding=encoding)
-    
+
     #@-node:toprettyxml
     #@+node:toxmldoc
     def toxmldoc(self):
@@ -172,7 +172,7 @@ class BisonNode:
         d = xml.dom.minidom.Document()
         d.appendChild(self.toxmlelem(d))
         return d
-    
+
     #@-node:toxmldoc
     #@+node:toxmlelem
     def toxmlelem(self, docobj):
@@ -180,10 +180,10 @@ class BisonNode:
         Returns a DOM Element object of this node and its children
         """
         specialAttribs = ['option', 'target', 'names', 'values']
-    
+
         # generate an xml element obj for this node
         x = docobj.createElement(self.target)
-    
+
         # set attribs
         for name, val in self.kw.items():
             if name in ['names', 'values'] or name.startswith("_"):
@@ -191,7 +191,7 @@ class BisonNode:
             x.setAttribute(name, str(val))
         #x.setAttribute('target', self.target)
         #x.setAttribute('option', self.option)
-    
+
         # and add the children
         for name, val in zip(self.names, self.values):
             if name in specialAttribs or name.startswith("_"):
@@ -204,11 +204,11 @@ class BisonNode:
                 tn = docobj.createTextNode(val)
                 sn.appendChild(tn)
                 x.appendChild(sn)
-    
+
         # done
         return x
-    
-    
+
+
     #@-node:toxmlelem
     #@-others
 #@-node:class BisonNode
@@ -216,7 +216,7 @@ class BisonNode:
 class BisonParser(object):
     """
     Base parser class
-    
+
     You should subclass this, and provide a bunch of methods called
     'on_TargetName', where 'TargetName' is the name of each target in
     your grammar (.y) file.
@@ -225,21 +225,21 @@ class BisonParser(object):
     #@+node:attributes
     # ---------------------------------------
     # override these if you need to
-    
+
     # command and options for running yacc/bison, except for filename arg
     bisonCmd = ["bison", "-d", "-v", '-t']
-    
+
     bisonFile = "tmp.y"
     bisonCFile = "tmp.tab.c"
     bisonHFile = "tmp.tab.h" # name of header file generated by bison cmd
-    
+
     bisonCFile1 = "tmp.bison.c" # c output file from bison gets renamed to this
     bisonHFile1 = "tokens.h" # bison-generated header file gets renamed to this
-    
+
     flexCmd = ["flex", ] # command and options for running [f]lex, except for filename arg
     flexFile = "tmp.l"
     flexCFile = "lex.yy.c"
-    
+
     flexCFile1 = "tmp.lex.c" # c output file from lex gets renamed to this
 
     cflags_pre = ['-fPIC']  # = CFLAGS added before all arguments.
@@ -247,27 +247,27 @@ class BisonParser(object):
 
     buildDirectory = './' # Directory used to store the generated / compiled files.
     debugSymbols = 1  # Add debugging symbols to the binary files.
-    
+
     verbose = 0
-    
+
     file = None # default to sys.stdin
-    
+
     last = None # last parsed target, top of parse tree
-    
+
     lasterror = None # gets set if there was an error
-    
+
     keepfiles = 0 # set to 1 to keep temporary engine build files
-    
+
     bisonEngineLibName = None # defaults to 'modulename-engine'
-    
+
     defaultNodeClass = BisonNode # class to use by default for creating new parse nodes
-    
+
     #@-node:attributes
     #@+node:__init__
     def __init__(self, **kw):
         """
         Abstract representation of parser
-        
+
         Keyword arguments:
             - read - a callable accepting an int arg (nbytes) and returning a string,
               default is this class' read() method
@@ -285,7 +285,7 @@ class BisonParser(object):
         read = kw.get('read', None)
         if read:
             self.read = read
-    
+
         fileobj = kw.get('file', None)
         if fileobj:
             if type(fileobj) == type(""):
@@ -296,34 +296,31 @@ class BisonParser(object):
             self.file = fileobj
         else:
             self.file = sys.stdin
-    
+
         nodeClass = kw.get('defaultNodeClass', None)
         if nodeClass:
             self.defaultNodeClass = nodeClass
-    
+
         self.verbose = kw.get('verbose', 0)
-    
+
         if kw.has_key('keepfiles'):
             self.keepfiles = kw['keepfiles']
-    
+
         # if engine lib name not declared, invent ont
         if not self.bisonEngineLibName:
             self.bisonEngineLibName = self.__class__.__module__ + "-parser"
-    
+
         # get an engine
         self.engine = ParserEngine(self)
-        
-    #@-node:__init__
-    #@+node:__getattr__
+
     def __getitem__(self, idx):
         return self.last[idx]
-    #@-node:__getattr__
-    #@+node:_handle
+
     def _handle(self, targetname, option, names, values):
         """
         Callback which receives a target from parser, as a targetname
         and list of term names and values.
-        
+
         Tries to dispatch to on_TargetName() methods if they exist,
         otherwise wraps the target in a BisonNode object
         """
@@ -347,20 +344,17 @@ class BisonParser(object):
             if self.verbose:
                 print "no handler for %s, using default" % targetname
             self.last = BisonNode(targetname, option=option, names=names, values=values)
-    
+
         # reset any resulting errors (assume they've been handled)
         #self.lasterror = None
-    
+
         # assumedly the last thing parsed is at the top of the tree
         return self.last
-    
-    
-    #@-node:_handle
-    #@+node:run
+
     def run(self, **kw):
         """
         Runs the parser, and returns the top-most parse target.
-        
+
         Keywords:
             - file - either a string, comprising a file to open and read input from, or
               a Python file object
@@ -368,7 +362,7 @@ class BisonParser(object):
         """
         if self.verbose:
             print "Parser.run: calling engine"
-    
+
         # grab keywords
         fileobj = kw.get('file', self.file)
         if type(fileobj) == type(""):
@@ -380,47 +374,44 @@ class BisonParser(object):
         else:
             filename = None
             fileobj = None
-    
+
         read = kw.get('read', self.read)
-    
+
         debug = kw.get('debug', 0)
-    
+
         # back up existing attribs
         oldfile = self.file
         oldread = self.read
-        
+
         # plug in new ones, if given
         if fileobj:
             self.file = fileobj
         if read:
             self.read = read
-    
+
         # do the parsing job, spew if error
         self.lasterror = None
         self.engine.runEngine(debug)
-    
+
         if self.lasterror:
             #print "Got error: %s" % repr(self.error)
             if filename != None:
                 raise ParserSyntaxError("%s:%d: '%s' near '%s'" % ((filename,) + self.lasterror))
             else:
                 raise ParserSyntaxError("Line %d: '%s' near '%s'" % self.lasterror)
-    
+
         # restore old values
         self.file = oldfile
         self.read = oldread
-    
+
         if self.verbose:
             print "Parser.run: back from engine"
         return self.last
-    
-    
-    #@-node:run
-    #@+node:read
+
     def read(self, nbytes):
         """
         Override this in your subclass, if you desire.
-        
+
         Arguments:
             - nbytes - the maximum length of the string which you may return.
               DO NOT return a string longer than this, or else Bad Things will
@@ -433,56 +424,48 @@ class BisonParser(object):
         if self.verbose:
             print "Parser.read: got %s bytes" % len(bytes)
         return bytes
-    #@-node:read
-    #@+node:_error
+
     def _error(self, linenum, msg, tok):
-        
+
         print "Parser: line %s: syntax error '%s' before '%s'" % (linenum, msg, tok)
-    
-    
-    #@-node:_error
-    #@+node:error
+
     def error(self, value):
         """
         Return the result of this method from a handler to notify a syntax error
         """
         self.lasterror = value
         return BisonError(value)
-    #@-node:error
-    #@+node:toxml
+
     def toxml(self):
         """
         Serialises the parse tree and returns it as a raw xml string
         """
         return self.last.toxml()
-    #@-node:toxml
-    #@+node:toxmldoc
+
     def toxmldoc(self):
         """
         Returns an xml.dom.minidom.Document object containing the parse tree
         """
         return self.last.toxmldoc()
-    #@-node:toxmldoc
-    #@+node:toprettyxml
+
     def toprettyxml(self):
         """
         Returns a human-readable xml representation of the parse tree
         """
         return self.last.toprettyxml()
-    #@-node:toprettyxml
-    #@+node:loadxml
+
     def loadxml(self, raw, namespace=None):
         """
         Loads a parse tree from raw xml text
-    
+
         Stores it in the '.last' attribute, which is where the root node
         of parsed text gets stored
-        
+
         Arguments:
             - raw - string containing the raw xml
             - namespace - a dict or module object, where the node classes required for
               reconstituting the parse tree, can be found
-        
+
         Returns:
             - root node object of reconstituted parse tree
         """
@@ -490,26 +473,24 @@ class BisonParser(object):
         tree = self.loadxmldoc(doc, namespace)
         self.last = tree
         return tree
-    #@-node:loadxml
-    #@+node:loadxmldoc
+
     def loadxmldoc(self, xmldoc, namespace=None):
         """
         Returns a reconstituted parse tree, loaded from an
         xml.dom.minidom.Document instance
-    
+
         Arguments:
             - xmldoc - an xml.dom.minidom.Document instance
             - namespace - a dict from which to find the classes needed
               to translate the document into a tree of parse nodes
         """
         return self.loadxmlobj(xmldoc.childNodes[0], namespace)
-    #@-node:loadxmldoc
-    #@+node:loadxmlobj
+
     def loadxmlobj(self, xmlobj, namespace=None):
         """
         Returns a node object, being a parse tree, reconstituted from an
         xml.dom.minidom.Element object
-    
+
         Arguments:
             - xmlobj - an xml.dom.minidom.Element instance
             - namespace - a namespace from which the node classes
@@ -520,34 +501,34 @@ class BisonParser(object):
             namespace = namespace.__dict__
         elif namespace == None:
             namespace = globals()
-    
+
         objname = xmlobj.tagName
         classname = objname + "_Node"
         classobj = namespace.get(classname, None)
-    
+
         namespacekeys = namespace.keys()
-    
+
         # barf if node is not a known parse node or token
         if (not classobj) and objname not in self.tokens:
             raise Exception("Cannot reconstitute %s: can't find required node class or token %s" % (
                 objname, classname))
-    
+
         if classobj:
             nodeobj = classobj()
-    
+
             # add the attribs
             for k,v in xmlobj.attributes.items():
                 setattr(nodeobj, k, v)
-    
+
         else:
             nodeobj = None
-    
+
         #print "----------------"
         #print "objname=%s" % repr(objname)
         #print "classname=%s" % repr(classname)
         #print "classobj=%s" % repr(classobj)
         #print "nodeobj=%s" % repr(nodeobj)
-        
+
         # now add the children
         for child in xmlobj.childNodes:
             #print "%s attributes=%s" % (child, child.attributes.items())
@@ -560,22 +541,15 @@ class BisonParser(object):
                 # it's a token
                 childobj = child.childNodes[0].nodeValue
                 #print "got token %s=%s" % (childname, childobj)
-            
+
             nodeobj.names.append(childname)
             nodeobj.values.append(childobj)
-    
-        # done
+
         return nodeobj
-    
-    
-    #@-node:loadxmlobj
-    #@+node:_globals
+
     def _globals(self):
         return globals().keys()
-    #@-node:_globals
-    #@-others
-#@-node:class BisonParser
-#@+node:bisonToPython
+
 def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
     """
     Rips the rules, tokens and precedences from a bison file, and the
@@ -610,7 +584,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
     except:
         raise Exception("Cannot open lex file %s" % lexfileName)
 
-    # break up into the three '%%'-separated sections    
+    # break up into the three '%%'-separated sections
     try:
         prologue, rulesRaw, epilogue = rawBison.split("\n%%\n")
     except:
@@ -618,13 +592,13 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
             "File %s is not a properly formatted bison file"
             " (needs 3 sections separated by %%%%" % (bisonfileName)
             )
-    
+
     # --------------------------------------
     # process prologue
 
     prologue = prologue.split("%}")[-1].strip() # ditch the C code
     prologue = re.sub("\\n([\t ]+)", " ", prologue) # join broken lines
-    
+
     #prologueLines = [line.strip() for line in prologue.split("\n")]
     lines = prologue.split("\n")
     tmp = []
@@ -685,7 +659,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         terms = tmp
 
         rules.append((tgt, terms))
-    
+
     # now we have our rulebase, we can churn out our skeleton Python file
     pyfile.write("\n".join([
         '#!/usr/bin/env python',
@@ -737,7 +711,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
             '# ------------------------------------------------------',
             '\n',
             ]))
-        
+
         # now spit out class decs for every parse target
         for target, options in rules:
             tmp = []
@@ -763,7 +737,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
                 '\n',
                 ]))
 
-        
+
     # start churning out the class dec
     pyfile.write("\n".join([
         'class Parser(BisonParser):',
@@ -942,8 +916,3 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         '',
         '',
         ]))
-
-#@-node:bisonToPython
-#@-others
-#@-node:@file src/python/bison.py
-#@-leo
