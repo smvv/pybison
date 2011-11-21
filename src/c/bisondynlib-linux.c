@@ -1,12 +1,9 @@
-//@+leo-ver=4
-//@+node:@file src/c/bisondynlib-linux.c
-//@@language c
 /*
  * Linux-specific dynamic library manipulation routines
  */
 
-#include <stdio.h>
 #include "bisondynlib.h"
+#include <stdio.h>
 #include <dlfcn.h>
 
 void *bisondynlib_open(char *filename)
@@ -41,7 +38,7 @@ char *bisondynlib_lookup_hash(void *handle)
 
 PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, int debug)
 {
-    void (*pparser)(PyObject *, void *, void *, int);
+    PyObject *(*pparser)(PyObject *, void *, void *, int);
     //PyObject *result;
 
     //printf("bisondynlib_run: looking up parser\n");
@@ -54,6 +51,7 @@ PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, in
     }
 
     (*pparser)(parser, cb, in, debug);
+
     //printf("bisondynlib_run: back from parser\n");
     //return result;
     Py_INCREF(Py_None);
@@ -83,6 +81,3 @@ int bisondynlib_build(char *libName, char *pyincdir)
     return 0;
 }
 */
-
-//@-node:@file src/c/bisondynlib-linux.c
-//@-leo

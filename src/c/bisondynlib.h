@@ -1,12 +1,9 @@
-//@+leo-ver=4
-//@+node:@file src/c/bisondynlib.h
-//@@language c
 /*
  * common interface to dynamic library routines
  */
 
-#include <stdio.h>
 #include "Python.h"
+#include <stdio.h>
 
 void *bisondynlib_open(char *filename);
 int bisondynlib_close(void *handle);
@@ -21,5 +18,3 @@ PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, in
 /*
 int bisondynlib_build(char *libName, char *pyincdir);
 */
-//@-node:@file src/c/bisondynlib.h
-//@-leo

@@ -60,7 +60,7 @@ cdef extern from "stdarg.h":
         pass
     ctypedef struct fake_type:
         pass
-    void va_start(va_list, void* arg)
+    void va_start(va_list, int arg)
     void* va_arg(va_list, fake_type)
     void va_end(va_list)
     fake_type void_type "void *"
@@ -69,12 +69,14 @@ cdef extern from "stdarg.h":
 # Callback function which is invoked by target handlers
 # within the C yyparse() function.
 
+import signal
+
 cdef public object py_callback(object parser, char *target, int option, \
         int nargs, ...):
 
     cdef int i
     cdef va_list ap
-    va_start(ap, <void*>nargs)
+    va_start(ap, <int>nargs)
 
     cdef void *objptr
     cdef object obj
@@ -111,7 +113,14 @@ cdef public object py_callback(object parser, char *target, int option, \
         #    print 'py_callback: calling handler:', \
         #          (target, option, names, values)
 
+
+        # Set the signal handler and a timeout alarm
+        signal.signal(signal.SIGALRM, parser.handle_timeout)
+        signal.alarm(parser.timeout)
+
         res = parser._handle(target, option, names, values)
+
+        signal.alarm(0)
 
         #if parser.verbose:
         #    print 'py_callback: handler returned:', res
@@ -176,7 +185,7 @@ cdef class ParserEngine:
     # rules hash str embedded in bison parser lib
     cdef char *libHash
 
-    def __init__(self, parser, **kw):
+    def __init__(self, parser):
         """
         Creates a ParserEngine wrapper, and builds/loads the library.
 
@@ -319,8 +328,8 @@ cdef class ParserEngine:
         write("\n".join([
             "%{",
             '',
-            "#include <stdio.h>",
             '#include "Python.h"',
+            "#include <stdio.h>",
             "extern FILE *yyin;",
             "extern int yylineno;"
             "extern char *yytext;",

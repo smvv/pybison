@@ -31,12 +31,15 @@ from bison_ import ParserEngine, unquoted
 #@+node:globals
 reSpaces = re.compile("\\s+")
 
-#@-node:globals
-#@+node:exceptions
+
 class ParserSyntaxError(Exception):
     pass
-#@-node:exceptions
-#@+node:class BisonError
+
+
+class TimeoutError(Exception):
+    pass
+
+
 class BisonError:
     """
     Flags an error to yyparse()
@@ -47,8 +50,8 @@ class BisonError:
 
     def __init__(self, value="syntax error"):
         self.value = value
-#@-node:class BisonError
-#@+node:class BisonNode
+
+
 class BisonNode:
     """
     Generic class for wrapping parse targets.
@@ -63,8 +66,7 @@ class BisonNode:
         - any keywords you want (except 'items'), with any type of value.
           keywords will be stored as attributes in the constructed object.
     """
-    #@    @+others
-    #@+node:__init__
+
     def __init__(self, **kw):
 
         self.__dict__.update(kw)
@@ -78,18 +80,12 @@ class BisonNode:
         # mirror this dict to simplify dumping
         self.kw = kw
 
-    #@-node:__init__
-    #@+node:__str__
     def __str__(self):
         return "<BisonNode:%s>" % self.target
 
-    #@-node:__str__
-    #@+node:__repr__
     def __repr__(self):
         return str(self)
 
-    #@-node:__repr__
-    #@+node:__getitem__
     def __getitem__(self, item):
         """
         Retrieves the ith value from this node, or child nodes
@@ -110,21 +106,17 @@ class BisonNode:
             return self.values[item[0]][item[1:]]
         else:
             raise TypeError("Can only index %s objects with an int or a list/tuple" % self.__class.__name__)
-    #@-node:__getitem__
-    #@+node:__len__
+
     def __len__(self):
 
         return len(self.values)
-    #@-node:__len__
-    #@+node:__getslice__
+
     def __getslice__(self, fromidx, toidx):
         return self.values[fromidx:toidx]
-    #@-node:__getslice__
-    #@+node:__iter__
+
     def __iter__(self):
         return iter(self.values)
-    #@-node:__iter__
-    #@+node:dump
+
     def dump(self, indent=0):
         """
         For debugging - prints a recursive dump of a parse tree node and its children
@@ -142,8 +134,6 @@ class BisonNode:
             else:
                 print indents + "  %s=%s" % (name, val)
 
-    #@-node:dump
-    #@+node:toxml
     def toxml(self):
         """
         Returns an xml serialisation of this node and its children, as a raw string
@@ -153,8 +143,6 @@ class BisonNode:
         """
         return self.toxmldoc().toxml()
 
-    #@-node:toxml
-    #@+node:toprettyxml
     def toprettyxml(self, indent='  ', newl='\n', encoding=None):
         """
         returns a human-readable xml serialisation of this node and its children
@@ -163,8 +151,6 @@ class BisonNode:
                                            newl=newl,
                                            encoding=encoding)
 
-    #@-node:toprettyxml
-    #@+node:toxmldoc
     def toxmldoc(self):
         """
         Returns the node and its children as an xml.dom.minidom.Document object
@@ -173,8 +159,6 @@ class BisonNode:
         d.appendChild(self.toxmlelem(d))
         return d
 
-    #@-node:toxmldoc
-    #@+node:toxmlelem
     def toxmlelem(self, docobj):
         """
         Returns a DOM Element object of this node and its children
@@ -209,10 +193,6 @@ class BisonNode:
         return x
 
 
-    #@-node:toxmlelem
-    #@-others
-#@-node:class BisonNode
-#@+node:class BisonParser
 class BisonParser(object):
     """
     Base parser class
@@ -221,8 +201,6 @@ class BisonParser(object):
     'on_TargetName', where 'TargetName' is the name of each target in
     your grammar (.y) file.
     """
-    #@    @+others
-    #@+node:attributes
     # ---------------------------------------
     # override these if you need to
 
@@ -250,6 +228,8 @@ class BisonParser(object):
 
     verbose = 0
 
+    timeout = 1  # Timeout in seconds after which a computation is terminated.
+
     file = None # default to sys.stdin
 
     last = None # last parsed target, top of parse tree
@@ -262,8 +242,6 @@ class BisonParser(object):
 
     defaultNodeClass = BisonNode # class to use by default for creating new parse nodes
 
-    #@-node:attributes
-    #@+node:__init__
     def __init__(self, **kw):
         """
         Abstract representation of parser
@@ -350,6 +328,9 @@ class BisonParser(object):
 
         # assumedly the last thing parsed is at the top of the tree
         return self.last
+
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError('Computation exceeded timeout limit.')
 
     def run(self, **kw):
         """
