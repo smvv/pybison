@@ -421,7 +421,7 @@ cdef class ParserEngine:
                         action = action + "             Py_INCREF(Py_None);\n"
                         action = action + "             yyclearin;\n"
 
-                    action = action + "          if (PyObject_HasAttrString($$, \"_pyBisonError\"))\n"
+                    action = action + "          if ($$ && $$ != Py_None && PyObject_HasAttrString($$, \"_pyBisonError\"))\n"
                     action = action + "          {\n"
                     action = action + "             yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, \"lasterror\")));\n"
                     action = action + "             Py_INCREF(Py_None);\n"
