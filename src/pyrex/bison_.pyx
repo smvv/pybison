@@ -69,7 +69,7 @@ cdef extern from "stdarg.h":
 # Callback function which is invoked by target handlers
 # within the C yyparse() function.
 
-import signal
+#import signal
 
 cdef public object py_callback(object parser, char *target, int option, \
         int nargs, ...):
@@ -78,11 +78,8 @@ cdef public object py_callback(object parser, char *target, int option, \
     cdef va_list ap
     va_start(ap, <int>nargs)
 
-    cdef void *objptr
-    cdef object obj
     cdef object valobj
     cdef void *val
-    cdef char *tokval
     cdef char *termname
 
     #if parser.verbose:
@@ -130,7 +127,6 @@ cdef public object py_callback(object parser, char *target, int option, \
 
 # callback routine for reading input
 cdef public void py_input(object parser, char *buf, int *result, int max_size):
-    cdef char *buf1
     cdef int buflen
 
     if parser.verbose:
@@ -284,7 +280,6 @@ cdef class ParserEngine:
             3. Compiling bison/lex files to C
             4. Compiling the C files, and link into a dynamic lib
         """
-        cdef char *incdir
 
         # -------------------------------------------------
         # rip the pertinent grammar specs from parser class
@@ -320,7 +315,7 @@ cdef class ParserEngine:
 
         f = open(buildDirectory + parser.bisonFile, "w")
         write = f.write
-        writelines = f.writelines
+        #writelines = f.writelines
 
         # grammar file prologue
         write("\n".join([
@@ -374,8 +369,8 @@ cdef class ParserEngine:
             tmp = []
 
             #print "options = %s" % repr(options)
-            opts = options.split("|")
-            #print "opts = %s" % repr(opts)
+            #opts = options.split("|")
+            ##print "opts = %s" % repr(opts)
             r = unquoted % r"\|"
             #print "r = <%s>" % r
             opts1 = re.split(r, " " + options)
@@ -406,9 +401,10 @@ cdef class ParserEngine:
                     action = action + '          $$ = (*py_callback)(\n            py_parser, "%s", %s, %%s' % \
                              (rule[0], idx) # note we're deferring the substitution of 'nterms' (last arg)
                     args = []
+                    i = -1
+
                     if nterms == 0:
                         args.append('NULL')
-                        i = -1
                     else:
                         for i in range(nterms):
                             if option[i] == '%prec':
@@ -498,8 +494,8 @@ cdef class ParserEngine:
         f.close()
 
         # create and set up a compiler object
-        ccompiler = distutils.ccompiler.new_compiler(verbose=parser.verbose)
-        ccompiler.set_include_dirs([distutils.sysconfig.get_python_inc()])
+        env = distutils.ccompiler.new_compiler(verbose=parser.verbose)
+        env.set_include_dirs([distutils.sysconfig.get_python_inc()])
 
         # -----------------------------------------
         # Now run bison on the grammar file
@@ -509,7 +505,7 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'bison cmd:', ' '.join(bisonCmd)
 
-        ccompiler.spawn(bisonCmd)
+        env.spawn(bisonCmd)
 
         if parser.verbose:
             print "renaming bison output files"
@@ -536,7 +532,7 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'flex cmd:', ' '.join(flexCmd)
 
-        ccompiler.spawn(flexCmd)
+        env.spawn(flexCmd)
 
         if os.path.isfile(buildDirectory + parser.flexCFile1):
             os.unlink(buildDirectory + parser.flexCFile1)
@@ -551,19 +547,19 @@ cdef class ParserEngine:
         # Now compile the files into a shared lib
 
         # compile bison and lex c sources
-        #bisonObj = ccompiler.compile([parser.bisonCFile1])
-        #lexObj = ccompiler.compile([parser.flexCFile1])
+        #bisonObj = env.compile([parser.bisonCFile1])
+        #lexObj = env.compile([parser.flexCFile1])
 
         #cl /DWIN32 /G4 /Gs /Oit /MT /nologo /W3 /WX bisondynlib-win32.c /Id:\python23\include
         #cc.compile(['bisondynlib-win32.c'],
         #           extra_preargs=['/DWIN32', '/G4', '/Gs', '/Oit', '/MT', '/nologo', '/W3', '/WX', '/Id:\python23\include'])
 
         # link 'em into a shared lib
-        objs = ccompiler.compile([buildDirectory + parser.bisonCFile1,
-                                  buildDirectory + parser.flexCFile1],
-                                 extra_preargs=parser.cflags_pre,
-                                 extra_postargs=parser.cflags_post,
-                                 debug=parser.debugSymbols)
+        objs = env.compile([buildDirectory + parser.bisonCFile1,
+                            buildDirectory + parser.flexCFile1],
+                           extra_preargs=parser.cflags_pre,
+                           extra_postargs=parser.cflags_post,
+                           debug=parser.debugSymbols)
         libFileName = buildDirectory + parser.bisonEngineLibName \
                       + imp.get_suffixes()[0][0]
 
@@ -576,8 +572,9 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'linking: %s => %s' % (', '.join(objs), libFileName)
 
-        ccompiler.link_shared_object(objs, libFileName)
+        env.link_shared_object(objs, libFileName)
 
+        #cdef char *incdir
         #incdir = PyString_AsString(get_python_inc())
         #bisondynlib_build(self.libFilename_py, incdir)
 
