@@ -101,13 +101,13 @@ cdef public object py_callback(object parser, char *target, int option, \
 
         for i in range(nargs):
             termname = <char*>va_arg(ap, str_type)
-            Py_INCREF(termname)
             PyList_SetItem(names, i, termname)
+            Py_INCREF(termname)
 
             val = <void *>va_arg(ap, void_type)
             valobj = <object>val
-            Py_INCREF(valobj)
             PyList_SetItem(values, i, valobj)
+            Py_INCREF(valobj)
 
         #if parser.verbose:
         #    print 'py_callback: calling handler:', \
@@ -115,12 +115,12 @@ cdef public object py_callback(object parser, char *target, int option, \
 
 
         # Set the signal handler and a timeout alarm
-        signal.signal(signal.SIGALRM, parser.handle_timeout)
-        signal.alarm(parser.timeout)
+        #signal.signal(signal.SIGALRM, parser.handle_timeout)
+        #signal.alarm(parser.timeout)
 
         res = parser._handle(target, option, names, values)
 
-        signal.alarm(0)
+        #signal.alarm(0)
 
         #if parser.verbose:
         #    print 'py_callback: handler returned:', res
