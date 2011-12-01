@@ -88,45 +88,41 @@ cdef public object py_callback(object parser, char *target, int option, \
     #if parser.verbose:
     #    print 'py_callback: called with nargs=%d' % nargs
 
-    try:
-        names = PyList_New(nargs)
-        values = PyList_New(nargs)
+    names = PyList_New(nargs)
+    values = PyList_New(nargs)
 
-        Py_INCREF(names)
-        Py_INCREF(values)
+    Py_INCREF(names)
+    Py_INCREF(values)
 
-        #for i in range(nargs):
-        #    print 'i=%d' % i , <char*>va_arg(ap, str_type), \
-        #                       hex(<int>va_arg(ap, str_type))
+    #for i in range(nargs):
+    #    print 'i=%d' % i , <char*>va_arg(ap, str_type), \
+    #                       hex(<int>va_arg(ap, str_type))
 
-        for i in range(nargs):
-            termname = <char*>va_arg(ap, str_type)
-            PyList_SetItem(names, i, termname)
-            Py_INCREF(termname)
+    for i in range(nargs):
+        termname = <char*>va_arg(ap, str_type)
+        PyList_SetItem(names, i, termname)
+        Py_INCREF(termname)
 
-            val = <void *>va_arg(ap, void_type)
-            valobj = <object>val
-            PyList_SetItem(values, i, valobj)
-            Py_INCREF(valobj)
+        val = <void *>va_arg(ap, void_type)
+        valobj = <object>val
+        PyList_SetItem(values, i, valobj)
+        Py_INCREF(valobj)
 
-        #if parser.verbose:
-        #    print 'py_callback: calling handler:', \
-        #          (target, option, names, values)
+    #if parser.verbose:
+    #    print 'py_callback: calling handler:', \
+    #          (target, option, names, values)
 
 
-        # Set the signal handler and a timeout alarm
-        #signal.signal(signal.SIGALRM, parser.handle_timeout)
-        #signal.alarm(parser.timeout)
+    # Set the signal handler and a timeout alarm
+    #signal.signal(signal.SIGALRM, parser.handle_timeout)
+    #signal.alarm(parser.timeout)
 
-        res = parser._handle(target, option, names, values)
+    res = parser._handle(target, option, names, values)
 
-        #signal.alarm(0)
+    #signal.alarm(0)
 
-        #if parser.verbose:
-        #    print 'py_callback: handler returned:', res
-    except:
-        traceback.print_exc()
-        res = None
+    #if parser.verbose:
+    #    print 'py_callback: handler returned:', res
 
     va_end(ap)
 
@@ -138,7 +134,7 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     cdef int buflen
 
     if parser.verbose:
-        print "\npy_input: want to read up to %s bytes" % max_size
+        print '\npy_input: want to read up to %s bytes' % max_size
 
     raw = parser.read(max_size)
     buflen = PyInt_AsLong(len(raw))
@@ -146,7 +142,7 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     memcpy(buf, PyString_AsString(raw), buflen)
 
     if parser.verbose:
-        print "\npy_input: got %s bytes" % buflen
+        print '\npy_input: got %s bytes' % buflen
 
 
 import sys, os, sha, re, imp, traceback
@@ -158,7 +154,7 @@ import distutils.ccompiler
 reSpaces = re.compile("\\s+")
 
 #unquoted = r"""^|[^'"]%s[^'"]?"""
-unquoted = "[^'\"]%s[^'\"]?"
+unquoted = '[^\'"]%s[^\'"]?'
 
 cdef class ParserEngine:
     """
@@ -263,19 +259,19 @@ cdef class ParserEngine:
         parser = self.parser
 
         if parser.verbose:
-            print "Opening library %s" % self.libFilename_py
+            print 'Opening library %s' % self.libFilename_py
         handle = bisondynlib_open(libFilename)
         self.libHandle = handle
         err = bisondynlib_err()
         if err:
-            printf("ParserEngine.openLib: error '%s'\n", err)
+            printf('ParserEngine.openLib: error "%s"\n', err)
             return
 
         # extract symbols
         self.libHash = bisondynlib_lookup_hash(handle)
 
         if parser.verbose:
-            print "Successfully loaded library"
+            print 'Successfully loaded library'
 
     def buildLib(self):
         """
@@ -294,14 +290,16 @@ cdef class ParserEngine:
         # rip the pertinent grammar specs from parser class
         parser = self.parser
 
-        # get target handler methods, in the order of appearance in the source
-        # file.
+        # get target handler methods, in the order of appearance in the
+        # source file.
         attribs = dir(parser)
         gHandlers = []
+
         for a in attribs:
-            if a.startswith("on_"):
+            if a.startswith('on_'):
                 method = getattr(parser, a)
                 gHandlers.append(method)
+
         gHandlers.sort(cmpLines)
 
         # get start symbol, tokens, precedences, lex script

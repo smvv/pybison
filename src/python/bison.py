@@ -320,11 +320,20 @@ class BisonParser(object):
                 except:
                     hdlrline = handler.__init__.func_code.co_firstlineno
 
-                print '_handle: invoking handler at line %s for "%s"' \
-                      % (hdlrline, targetname)
+                print 'BisonParser._handle: call handler at line %s with: %s' \
+                      % (hdlrline, str((targetname, option, names, values)))
 
-            self.last = handler(target=targetname, option=option, names=names,
-                                values=values)
+            try:
+                self.last = handler(target=targetname, option=option, names=names,
+                                    values=values)
+            except Exception as e:
+                self.lasterror = e
+                print type(e), str(e)
+                #traceback.print_last()
+                #traceback.print_stack()
+                traceback.print_stack()
+                raise
+
             #if self.verbose:
             #    print 'handler for %s returned %s' \
             #          % (targetname, repr(self.last))
@@ -334,6 +343,8 @@ class BisonParser(object):
             self.last = BisonNode(targetname, option=option, names=names, values=values)
 
         # reset any resulting errors (assume they've been handled)
+        if self.lasterror:
+            print 'lasterror:', self.lasterror
         #self.lasterror = None
 
         # assumedly the last thing parsed is at the top of the tree
