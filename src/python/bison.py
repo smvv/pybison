@@ -45,8 +45,9 @@ class BisonError(object):
     """
     _pyBisonError = 1
 
-    def __init__(self, value='syntax error'):
-        self.value = value
+    def __init__(self, error, traceback_info):
+        self.value = error
+        self.traceback_info = traceback_info
 
 
 class BisonException(Exception):
@@ -244,7 +245,7 @@ class BisonParser(object):
 
     last = None # last parsed target, top of parse tree
 
-    lasterror = None # gets set if there was an error
+    last_error = None # gets set if there was an error
 
     keepfiles = 0 # set to 1 to keep temporary engine build files
 
@@ -328,9 +329,9 @@ class BisonParser(object):
             try:
                 self.last = handler(target=targetname, option=option,
                                     names=names, values=values)
-            except:
+            except Exception as e:
                 #traceback.print_exception(*sys.exc_info())
-                return self.error(sys.exc_info())
+                return self.error(e, sys.exc_info())
             #    raise
 
             #if self.verbose:
@@ -342,7 +343,7 @@ class BisonParser(object):
             self.last = BisonNode(targetname, option=option, names=names, values=values)
 
         # reset any resulting errors (assume they've been handled)
-        #self.lasterror = None
+        #self.last_error = None
 
         # assumedly the last thing parsed is at the top of the tree
         return self.last
@@ -395,11 +396,11 @@ class BisonParser(object):
         while not self.file.closed:
             # do the parsing job, spew if error
             self.last = None
-            self.lasterror = None
+            self.last_error = None
             self.engine.runEngine(debug)
 
-            if self.lasterror:
-                self.report_last_error(filename, self.lasterror)
+            if self.last_error:
+                self.report_last_error(filename, self.last_error)
 
             if self.verbose:
                 print 'Parser.run: back from engine'
@@ -446,13 +447,14 @@ class BisonParser(object):
         print 'Parser: line %s: syntax error "%s" before "%s"' \
               % (linenum, msg, tok)
 
-    def error(self, value):
+    def error(self, exception, traceback_info):
         """
         Return the result of this method from a handler to notify a syntax error
         """
         # TODO: should this function be removed?
-        self.lasterror = value
-        return BisonError(value)
+        self.last_error = BisonError(exception, traceback_info)
+
+        return self.last_error
 
     def exception(self, exception):
         # TODO: should this function be removed?
@@ -476,7 +478,11 @@ class BisonParser(object):
 
             print >>sys.stderr, msg
         else:
-            traceback.print_exception(*error)
+            print error
+            if not self.interactive:
+                raise error[3]
+
+            traceback.print_exception(*error[:2])
 
     def toxml(self):
         """

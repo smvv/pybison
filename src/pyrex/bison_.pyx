@@ -278,7 +278,7 @@ cdef class ParserEngine:
 
         #s = s + '          if ($$ && $$ != Py_None && PyObject_HasAttrString($$, "_pyBisonError"))\n'
         #s = s + '          {\n'
-        #s = s + '              yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, "lasterror")));\n'
+        #s = s + ' yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, "last_error")));\n'
         #s = s + '             Py_INCREF(Py_None);\n'
         #s = s + '             YYERROR;\n'
         #s = s + '          }\n'
@@ -287,11 +287,11 @@ cdef class ParserEngine:
         s += '          {\n'
         s += '            if (PyObject_HasAttrString($$, "_pyBisonError"))\n'
         s += '            {\n'
-        s += '              //PyObject* lasterror = PyObject_GetAttrString(py_parser, "lasterror");\n'
-        s += '              //if (lasterror && PyString_Check(lasterror))\n'
-        s += '              //  yyerror(PyString_AsString(lasterror));\n'
+        s += '              //PyObject* last_error = PyObject_GetAttrString(py_parser, "last_error");\n'
+        s += '              //if (last_error && PyString_Check(last_error))\n'
+        s += '              //  yyerror(PyString_AsString(last_error));\n'
         s += '              //else\n'
-        s += '              //  yyerror("No \\"lasterror\\" attribute set in BisonError or not a string");\n'
+        s += '              //  yyerror("No \\"last_error\\" attribute set in BisonError or not a string");\n'
         s += '              Py_INCREF(Py_None);\n'
         s += '              YYERROR;\n'
         s += '            }\n'
@@ -459,7 +459,7 @@ cdef class ParserEngine:
                     action = action + ",\n            ".join(args) + "\n            );\n"
 
                     if 'error' in option:
-                        action = action + "             PyObject_SetAttrString(py_parser, \"lasterror\", Py_None);\n"
+                        action = action + " PyObject_SetAttrString(py_parser, \"last_error\", Py_None);\n"
                         action = action + "             Py_INCREF(Py_None);\n"
                         action = action + "             yyclearin;\n"
 
@@ -504,7 +504,7 @@ cdef class ParserEngine:
             '  PyTuple_SetItem(args, 1, PyString_FromString(mesg));',
             '  PyTuple_SetItem(args, 2, PyString_FromString(yytext));',
             '',
-            '  ret = PyObject_SetAttrString((PyObject *)py_parser, "lasterror", args);',
+            '  ret = PyObject_SetAttrString((PyObject *)py_parser, "last_error", args);',
             '  //printf("PyObject_SetAttrString: %d\\n", ret);',
             '',
             '  //printf("line %d: %s before %s\\n", yylineno+1, mesg, yytext);',
