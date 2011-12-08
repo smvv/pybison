@@ -470,7 +470,7 @@ class BisonParser(object):
                 raise ParserSyntaxError(msg)
 
             print >>sys.stderr, msg
-        elif isinstance(error[0], int):
+        elif hasattr(error, '__getitem__') and isinstance(error[0], int):
             msg = 'Line %d: "%s" near "%s"' % error
 
             if not self.interactive:
@@ -480,9 +480,9 @@ class BisonParser(object):
         else:
             print error
             if not self.interactive:
-                raise error[3]
+                raise error.value
 
-            traceback.print_exception(*error[:2])
+            traceback.print_exception(*error.traceback_info)
 
     def toxml(self):
         """
