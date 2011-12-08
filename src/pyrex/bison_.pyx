@@ -82,18 +82,11 @@ cdef public object py_callback(object parser, char *target, int option, \
     cdef void *val
     cdef char *termname
 
-    #if parser.verbose:
-    #    print 'py_callback: called with nargs=%d' % nargs
-
     names = PyList_New(nargs)
     values = PyList_New(nargs)
 
     Py_INCREF(names)
     Py_INCREF(values)
-
-    #for i in range(nargs):
-    #    print 'i=%d' % i , <char*>va_arg(ap, str_type), \
-    #                       hex(<int>va_arg(ap, str_type))
 
     for i in range(nargs):
         termname = <char*>va_arg(ap, str_type)
@@ -101,7 +94,12 @@ cdef public object py_callback(object parser, char *target, int option, \
         Py_INCREF(termname)
 
         val = <void *>va_arg(ap, void_type)
-        valobj = <object>val
+
+        if val:
+            valobj = <object>val
+        else:
+            valobj = None
+
         PyList_SetItem(values, i, valobj)
         Py_INCREF(valobj)
 
@@ -114,14 +112,14 @@ cdef public object py_callback(object parser, char *target, int option, \
     #signal.signal(signal.SIGALRM, parser.handle_timeout)
     #signal.alarm(parser.timeout)
 
+    va_end(ap)
+
     res = parser._handle(target, option, names, values)
 
     #signal.alarm(0)
 
     #if parser.verbose:
     #    print 'py_callback: handler returned:', res
-
-    va_end(ap)
 
     return res
 
@@ -139,6 +137,12 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
 
     if parser.verbose:
         print '\npy_input: got %s bytes' % buflen
+
+    if buflen == 0 and parser.file:
+        # Marks the Python file object as being closed from Python's point of
+        # view. This does not close the associated C stream (which is not
+        # necessary here, otherwise use "os.close(0)").
+        parser.file.close()
 
 
 import sys, os, sha, re, imp, traceback
@@ -269,6 +273,42 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'Successfully loaded library'
 
+    def generate_exception_handler(self):
+        s = ''
+
+        #s = s + '          if ($$ && $$ != Py_None && PyObject_HasAttrString($$, "_pyBisonError"))\n'
+        #s = s + '          {\n'
+        #s = s + '              yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, "lasterror")));\n'
+        #s = s + '             Py_INCREF(Py_None);\n'
+        #s = s + '             YYERROR;\n'
+        #s = s + '          }\n'
+
+        s += '          if ($$ && $$ != Py_None)\n'
+        s += '          {\n'
+        s += '            if (PyObject_HasAttrString($$, "_pyBisonError"))\n'
+        s += '            {\n'
+        s += '              //PyObject* lasterror = PyObject_GetAttrString(py_parser, "lasterror");\n'
+        s += '              //if (lasterror && PyString_Check(lasterror))\n'
+        s += '              //  yyerror(PyString_AsString(lasterror));\n'
+        s += '              //else\n'
+        s += '              //  yyerror("No \\"lasterror\\" attribute set in BisonError or not a string");\n'
+        s += '              Py_INCREF(Py_None);\n'
+        s += '              YYERROR;\n'
+        s += '            }\n'
+        s += '          }\n'
+        #s += '          else\n'
+        #s += '          {\n'
+        #s += '            PyObject* obj = PyErr_Occurred();\n'
+        #s += '            if (obj)\n'
+        #s += '            {\n'
+        #s += '              fprintf(stderr, "exception caught in bison_:\\n");\n'
+        #s += '              PyErr_Print();\n'
+        #s += '              YYERROR;\n'
+        #s += '            }\n'
+        #s += '          }\n'
+
+        return s
+
     def buildLib(self):
         """
         Creates the parser engine lib
@@ -322,7 +362,6 @@ cdef class ParserEngine:
             "%{",
             '',
             '#include "Python.h"',
-            "#include <stdio.h>",
             "extern FILE *yyin;",
             "extern int yylineno;"
             "extern char *yytext;",
@@ -415,7 +454,7 @@ cdef class ParserEngine:
                     # now, we have the correct terms count
                     action = action % (i + 1)
 
-                    # assemble the full rule + action, ad to list
+                    # assemble the full rule + action, add to list
                     action = action + ",\n            "
                     action = action + ",\n            ".join(args) + "\n            );\n"
 
@@ -424,13 +463,10 @@ cdef class ParserEngine:
                         action = action + "             Py_INCREF(Py_None);\n"
                         action = action + "             yyclearin;\n"
 
-                    action = action + "          if ($$ && $$ != Py_None && PyObject_HasAttrString($$, \"_pyBisonError\"))\n"
-                    action = action + "          {\n"
-                    action = action + "             yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, \"lasterror\")));\n"
-                    action = action + "             Py_INCREF(Py_None);\n"
-                    action = action + "             YYERROR;\n"
-                    action = action + "          }\n"
-                    action = action + "        }\n"
+                    action = action + self.generate_exception_handler()
+
+                    action = action + '        }\n'
+
                     options.append(" ".join(option) + action)
                     idx = idx + 1
                 write("    | ".join(options) + "    ;\n\n")

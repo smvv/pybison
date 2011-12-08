@@ -1,39 +1,32 @@
-#@+leo-ver=4
-#@+node:@file src/python/bison.py
 """
 Wrapper module for interfacing with Bison (yacc)
 
 Written April 2004 by David McNab <david@freenet.org.nz>
 Copyright (c) 2004 by David McNab, all rights reserved.
 
-Released under the GNU General Public License, a copy
-of which should appear in this distribution in the file
-called 'COPYING'. If this file is missing, then you can
-obtain a copy of the GPL license document from the GNU
-website at http://www.gnu.org.
+Released under the GNU General Public License, a copy of which should appear in
+this distribution in the file called 'COPYING'. If this file is missing, then
+you can obtain a copy of the GPL license document from the GNU website at
+http://www.gnu.org.
 
-This software is released with no warranty whatsoever.
-Use it at your own risk.
+This software is released with no warranty whatsoever. Use it at your own
+risk.
 
-If you wish to use this software in a commercial application,
-and wish to depart from the GPL licensing requirements,
-please contact the author and apply for a commercial license.
+If you wish to use this software in a commercial application, and wish to
+depart from the GPL licensing requirements, please contact the author and apply
+for a commercial license.
 """
+
 import sys
-import os
-import sha
-import re
-import imp
+#import imp
 import traceback
 import xml.dom
 import xml.dom.minidom
 import types
-import distutils.sysconfig
-import distutils.ccompiler
+#import distutils.sysconfig
+#import distutils.ccompiler
 
-from bison_ import ParserEngine, unquoted
-
-reSpaces = re.compile('\\s+')
+from bison_ import ParserEngine
 
 
 class ParserSyntaxError(Exception):
@@ -44,12 +37,19 @@ class TimeoutError(Exception):
     pass
 
 
-class BisonError:
+class BisonError(object):
     """
     Flags an error to yyparse()
 
     You should return this in your actions to notify a syntax error
     """
+    _pyBisonError = 1
+
+    def __init__(self, value='syntax error'):
+        self.value = value
+
+
+class BisonException(Exception):
     _pyBisonError = 1
 
     def __init__(self, value='syntax error'):
@@ -323,16 +323,15 @@ class BisonParser(object):
                 print 'BisonParser._handle: call handler at line %s with: %s' \
                       % (hdlrline, str((targetname, option, names, values)))
 
+            #self.last = handler(target=targetname, option=option, names=names,
+            #                    values=values)
             try:
-                self.last = handler(target=targetname, option=option, names=names,
-                                    values=values)
-            except Exception as e:
-                self.lasterror = e
-                print type(e), str(e)
-                #traceback.print_last()
-                #traceback.print_stack()
-                traceback.print_stack()
-                raise
+                self.last = handler(target=targetname, option=option,
+                                    names=names, values=values)
+            except:
+                #traceback.print_exception(*sys.exc_info())
+                return self.error(sys.exc_info())
+            #    raise
 
             #if self.verbose:
             #    print 'handler for %s returned %s' \
@@ -343,8 +342,6 @@ class BisonParser(object):
             self.last = BisonNode(targetname, option=option, names=names, values=values)
 
         # reset any resulting errors (assume they've been handled)
-        if self.lasterror:
-            print 'lasterror:', self.lasterror
         #self.lasterror = None
 
         # assumedly the last thing parsed is at the top of the tree
@@ -391,25 +388,37 @@ class BisonParser(object):
         if read:
             self.read = read
 
-        # do the parsing job, spew if error
-        self.lasterror = None
-        self.engine.runEngine(debug)
+        if self.verbose and self.file.closed:
+            print 'Parser.run(): self.file', self.file, 'is closed'
 
-        if self.lasterror:
-            if filename != None:
-                raise ParserSyntaxError('%s:%d: "%s" near "%s"' 
-                                        % ((filename,) + self.lasterror))
-            else:
-                raise ParserSyntaxError('Line %d: "%s" near "%s"' 
-                                        % self.lasterror)
+        # TODO: add option to fail on first error.
+        while not self.file.closed:
+            # do the parsing job, spew if error
+            self.last = None
+            self.lasterror = None
+            self.engine.runEngine(debug)
+
+            if self.lasterror:
+                self.report_last_error(filename, self.lasterror)
+
+            if self.verbose:
+                print 'Parser.run: back from engine'
+
+            if self.verbose and not self.file.closed:
+                print 'last:', self.last
+
+        if self.verbose:
+            print 'last:', self.last
 
         # restore old values
         self.file = oldfile
         self.read = oldread
 
         if self.verbose:
-            print 'Parser.run: back from engine'
+            print '------------------ result=', self.last
 
+        # TODO: return last result (see while loop):
+        # return self.last[:-1]
         return self.last
 
     def read(self, nbytes):
@@ -433,7 +442,7 @@ class BisonParser(object):
         return bytes
 
     def _error(self, linenum, msg, tok):
-
+        # TODO: should this function be removed?
         print 'Parser: line %s: syntax error "%s" before "%s"' \
               % (linenum, msg, tok)
 
@@ -441,25 +450,53 @@ class BisonParser(object):
         """
         Return the result of this method from a handler to notify a syntax error
         """
+        # TODO: should this function be removed?
         self.lasterror = value
         return BisonError(value)
+
+    def exception(self, exception):
+        # TODO: should this function be removed?
+        self.lastexception = exception
+        return BisonException(exception)
+
+    def report_last_error(self, filename, error):
+        if filename != None:
+            msg = '%s:%d: "%s" near "%s"' \
+                    % ((filename,) + error)
+
+            if not self.interactive:
+                raise ParserSyntaxError(msg)
+
+            print >>sys.stderr, msg
+        elif isinstance(error[0], int):
+            msg = 'Line %d: "%s" near "%s"' % error
+
+            if not self.interactive:
+                raise ParserSyntaxError(msg)
+
+            print >>sys.stderr, msg
+        else:
+            traceback.print_exception(*error)
 
     def toxml(self):
         """
         Serialises the parse tree and returns it as a raw xml string
         """
+        # TODO: should this function be moved to another file?
         return self.last.toxml()
 
     def toxmldoc(self):
         """
         Returns an xml.dom.minidom.Document object containing the parse tree
         """
+        # TODO: should this function be moved to another file?
         return self.last.toxmldoc()
 
     def toprettyxml(self):
         """
         Returns a human-readable xml representation of the parse tree
         """
+        # TODO: should this function be moved to another file?
         return self.last.toprettyxml()
 
     def loadxml(self, raw, namespace=None):
@@ -477,6 +514,7 @@ class BisonParser(object):
         Returns:
             - root node object of reconstituted parse tree
         """
+        # TODO: should this function be moved to another file?
         doc = xml.dom.minidom.parseString(raw)
         tree = self.loadxmldoc(doc, namespace)
         self.last = tree
@@ -492,6 +530,7 @@ class BisonParser(object):
             - namespace - a dict from which to find the classes needed
               to translate the document into a tree of parse nodes
         """
+        # TODO: should this function be moved to another file?
         return self.loadxmlobj(xmldoc.childNodes[0], namespace)
 
     def loadxmlobj(self, xmlobj, namespace=None):
@@ -504,6 +543,7 @@ class BisonParser(object):
             - namespace - a namespace from which the node classes
               needed for reconstituting the tree, can be found
         """
+        # TODO: should this function be moved to another file?
         # check on namespace
         if type(namespace) is types.ModuleType:
             namespace = namespace.__dict__
@@ -556,355 +596,3 @@ class BisonParser(object):
 
     def _globals(self):
         return globals().keys()
-
-def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
-    """
-    Rips the rules, tokens and precedences from a bison file, and the verbatim
-    text from a lex file and generates a boilerplate python file containing a
-    Parser class with handler methods and grammar attributes.
-
-    Arguments:
-        - bisonfileName - name of input bison script
-        - lexfileName - name of input flex script
-        - pyfileName - name of output python file
-        - generateClasses - flag - default 0 - if 1, causes a unique class to
-          be defined for each parse target, and for the corresponding target
-          handler method in the main Parser class to use this class when
-          creating the node.
-    """
-    # try to create output file
-    try:
-        pyfile = file(pyfileName, 'w')
-    except:
-        raise Exception('Cannot create output file "%s"' % pyfileName)
-
-    # try to open/read the bison file
-    try:
-        rawBison = file(bisonfileName).read()
-    except:
-        raise Exception('Cannot open bison file "%s"' % bisonfileName)
-
-    # try to open/read the lex file
-    try:
-        rawLex = file(lexfileName).read()
-    except:
-        raise Exception('Cannot open lex file %s' % lexfileName)
-
-    # break up into the three '%%'-separated sections
-    try:
-        prologue, rulesRaw, epilogue = rawBison.split('\n%%\n')
-    except:
-        raise Exception(
-            'File %s is not a properly formatted bison file'
-            ' (needs 3 sections separated by %%%%' % (bisonfileName)
-            )
-
-    # --------------------------------------
-    # process prologue
-
-    prologue = prologue.split('%}')[-1].strip() # ditch the C code
-    prologue = re.sub('\\n([\t ]+)', ' ', prologue) # join broken lines
-
-    #prologueLines = [line.strip() for line in prologue.split('\n')]
-    lines = prologue.split('\n')
-    tmp = []
-
-    for line in lines:
-        tmp.append(line.strip())
-
-    prologueLines = tmp
-
-    prologueLines = filter(None, prologueLines)
-    tokens = []
-    precRules = []
-
-    for line in prologueLines:
-        words = reSpaces.split(line)
-        kwd = words[0]
-        args = words[1:]
-
-        if kwd == '%token':
-            tokens.extend(args)
-        elif kwd in ['%left', '%right', '%nonassoc']:
-            precRules.append((kwd, args))
-        elif kwd == '%start':
-            startTarget = args[0]
-
-    # -------------------------------------------------------------
-    # process rules
-    rulesRaw = re.sub('\\n([\t ]+)', ' ', rulesRaw) # join broken lines
-    rulesLines = filter('', map(str.strip, re.split(unquoted % ';', rulesRaw)))
-
-    rules = []
-    for rule in rulesLines:
-        #print '--'
-        #print repr(rule)
-
-        #tgt, terms = rule.split(':')
-        try:
-            tgt, terms = re.split(unquoted % ':', rule)
-        except ValueError:
-            print 'Error in rule: %s' % rule
-            raise
-
-        tgt, terms = tgt.strip(), terms.strip()
-
-        #terms = [t.strip() for t in terms.split('|')]
-        #terms = [reSpaces.split(t) for t in terms]
-
-        tmp = []
-        #for t in terms.split('|'):
-        for t in re.split(unquoted % r'\|', terms):
-
-            t = t.strip()
-            tmp.append(reSpaces.split(t))
-        terms = tmp
-
-        rules.append((tgt, terms))
-
-    # now we have our rulebase, we can churn out our skeleton Python file
-    pyfile.write('\n'.join([
-        '#!/usr/bin/env python',
-        '',
-        '"""',
-        'PyBison file automatically generated from grammar file %s' % bisonfileName,
-        'You can edit this module, or import it and subclass the Parser class',
-        '"""',
-        '',
-        'import sys',
-        '',
-        'from bison import BisonParser, BisonNode, BisonError',
-        '',
-        'bisonFile = \'%s\'  # original bison file' % bisonfileName,
-        'lexFile = \'%s\'    # original flex file' % lexfileName,
-        '\n',
-        ]))
-
-    # if generating target classes
-    if generateClasses:
-        # create a base class for all nodes
-        pyfile.write("\n".join([
-            'class ParseNode(BisonNode):',
-            '    """',
-            '    This is the base class from which all your',
-            '    parse nodes are derived.',
-            '    Add methods to this class as you need them',
-            '    """',
-            '    def __init__(self, **kw):',
-            '        BisonNode.__init__(self, **kw)',
-            '',
-            '    def __str__(self):',
-            '        """Customise as needed"""',
-            '        return \'<%s instance at 0x%x>\' % (self.__class__.__name__, hash(self))',
-            '',
-            '    def __repr__(self):',
-            '        """Customise as needed"""',
-            '        return str(self)',
-            '',
-            '    def dump(self, indent=0):',
-            '        """',
-            '        Dump out human-readable, indented parse tree',
-            '        Customise as needed - here, or in the node-specific subclasses',
-            '        """',
-            '        BisonNode.dump(self, indent) # alter as needed',
-            '\n',
-            '# ------------------------------------------------------',
-            '# Define a node class for each grammar target',
-            '# ------------------------------------------------------',
-            '\n',
-            ]))
-
-        # now spit out class decs for every parse target
-        for target, options in rules:
-            tmp = map(' '.join, options)
-
-            # totally self-indulgent grammatical pedantry
-            if target[0].lower() in ['a','e','i','o','u']:
-                plural = 'n'
-            else:
-                plural = ''
-
-            pyfile.write("\n".join([
-                'class %s_Node(ParseNode):' % target,
-                '    """',
-                '    Holds a%s "%s" parse target and its components.' % (plural, target),
-                '    """',
-                '    def __init__(self, **kw):',
-                '        ParseNode.__init__(self, **kw)',
-                '',
-                '    def dump(self, indent=0):',
-                '        ParseNode.dump(self, indent)',
-                '\n',
-                ]))
-
-
-    # start churning out the class dec
-    pyfile.write('\n'.join([
-        'class Parser(BisonParser):',
-        '    """',
-        '    bison Parser class generated automatically by bison2py from the',
-        '    grammar file "%s" and lex file "%s"' % (bisonfileName, lexfileName),
-        '',
-        '    You may (and probably should) edit the methods in this class.',
-        '    You can freely edit the rules (in the method docstrings), the',
-        '    tokens list, the start symbol, and the precedences.',
-        '',
-        '    Each time this class is instantiated, a hashing technique in the',
-        '    base class detects if you have altered any of the rules. If any',
-        '    changes are detected, a new dynamic lib for the parser engine',
-        '    will be generated automatically.',
-        '    """',
-        '\n',
-        ]))
-
-    # add the default node class
-    if not generateClasses:
-        pyfile.write('\n'.join([
-            '    # -------------------------------------------------',
-            '    # Default class to use for creating new parse nodes',
-            '    # -------------------------------------------------',
-            '    defaultNodeClass = BisonNode',
-            '\n',
-            ]))
-
-    # add the name of the dynamic library we need
-    libfileName = os.path.splitext(os.path.split(pyfileName)[1])[0] \
-                  + '-engine'
-
-    pyfile.write('\n'.join([
-        '    # --------------------------------------------',
-        '    # basename of binary parser engine dynamic lib',
-        '    # --------------------------------------------',
-        '    bisonEngineLibName = \'%s\'' % (parser.buildDirectory + libfileName),
-        '\n',
-        ]))
-
-    # add the tokens
-    #pyfile.write('    tokens = (%s,)\n\n' % ', '.join([''%s'' % t for t in tokens]))
-    toks = ', '.join(tokens)
-
-    pyfile.write('    # ----------------------------------------------------------------\n')
-    pyfile.write('    # lexer tokens - these must match those in your lex script (below)\n')
-    pyfile.write('    # ----------------------------------------------------------------\n')
-    pyfile.write('    tokens = %s\n\n' % tmp)
-
-    # add the precedences
-    pyfile.write('    # ------------------------------\n')
-    pyfile.write('    # precedences\n')
-    pyfile.write('    # ------------------------------\n')
-    pyfile.write('    precedences = (\n')
-    for prec in precRules:
-        precline = ', '.join(prec[1])
-        pyfile.write('        (\'%s\', %s,),\n' % (
-                prec[0][1:], # left/right/nonassoc, quote-wrapped, no '%s'
-                tmp,  # quote-wrapped targets
-                )
-            )
-    pyfile.write('        )\n\n'),
-
-    pyfile.write('\n'.join([
-        '    # ---------------------------------------------------------------',
-        '    # Declare the start target here (by name)',
-        '    # ---------------------------------------------------------------',
-        '    start = \'%s\'' % startTarget,
-        '\n',
-        ]))
-
-    # now the interesting bit - write the rule handler methods
-    pyfile.write('\n'.join([
-        '    # ---------------------------------------------------------------',
-        '    # These methods are the python handlers for the bison targets.',
-        '    # (which get called by the bison code each time the corresponding',
-        '    # parse target is unambiguously reached)',
-        '    #',
-        '    # WARNING - don\'t touch the method docstrings unless you know what',
-        '    # you are doing - they are in bison rule syntax, and are passed',
-        '    # verbatim to bison to build the parser engine library.',
-        '    # ---------------------------------------------------------------',
-        '\n',
-        ]))
-
-    for target, options in rules:
-        tmp = map(' '.join, options)
-
-        if generateClasses:
-            nodeClassName = target + '_Node'
-        else:
-            nodeClassName = 'self.defaultNodeClass'
-
-        pyfile.write('\n'.join([
-            '    def on_%s(self, target, option, names, values):' % target,
-            '        """',
-            '        %s' % target,
-            '            : ' + '\n            | '.join(tmp),
-            '        """',
-            '        return %s(' % nodeClassName,
-            '            target=\'%s\','  % target,
-            '            option=option,',
-            '            names=names,',
-            '            values=values)',
-            '\n',
-            ]))
-
-    # now the ugly bit - add the raw lex script
-    pyfile.write('\n'.join([
-        '    # -----------------------------------------',
-        '    # raw lex script, verbatim here',
-        '    # -----------------------------------------',
-        '    lexscript = r"""',
-        rawLex,
-        '    """',
-        '    # -----------------------------------------',
-        '    # end raw lex script',
-        '    # -----------------------------------------',
-        '',
-        '',
-        ]))
-
-    # and now, create a main for testing which either reads stdin, or a filename arg
-    pyfile.write('\n'.join([
-        'def usage():',
-        '    print \'%s: PyBison parser derived from %s and %s\' % (sys.argv[0], bisonFile, lexFile)',
-        '    print \'Usage: %s [-k] [-v] [-d] [filename]\' % sys.argv[0]',
-        '    print \'  -k       Keep temporary files used in building parse engine lib\'',
-        '    print \'  -v       Enable verbose messages while parser is running\'',
-        '    print \'  -d       Enable garrulous debug messages from parser engine\'',
-        '    print \'  filename path of a file to parse, defaults to stdin\'',
-        '',
-        'def main(*args):',
-        '    """',
-        '    Unit-testing func',
-        '    """',
-        '',
-        '    keepfiles = 0',
-        '    verbose = 0',
-        '    debug = 0',
-        '    filename = None',
-        '',
-        '    for s in [\'-h\', \'-help\', \'--h\', \'--help\', \'-?\']:',
-        '        if s in args:',
-        '            usage()',
-        '            sys.exit(0)',
-        '',
-        '    if len(args) > 0:',
-        '        if \'-k\' in args:',
-        '            keepfiles = 1',
-        '            args.remove(\'-k\')',
-        '        if \'-v\' in args:',
-        '            verbose = 1',
-        '            args.remove(\'-v\')',
-        '        if \'-d\' in args:',
-        '            debug = 1',
-        '            args.remove(\'-d\')',
-        '    if len(args) > 0:',
-        '        filename = args[0]',
-        '',
-        '    p = Parser(verbose=verbose, keepfiles=keepfiles)',
-        '    tree = p.run(file=filename, debug=debug)',
-        '    return tree',
-        '',
-        'if __name__ == \'__main__\':',
-        '    main(*(sys.argv[1:]))',
-        '',
-        '',
-        ]))
