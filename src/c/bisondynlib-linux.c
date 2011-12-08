@@ -39,11 +39,9 @@ char *bisondynlib_lookup_hash(void *handle)
 PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, int debug)
 {
     PyObject *(*pparser)(PyObject *, void *, void *, int);
-    //PyObject *result;
 
-    //printf("bisondynlib_run: looking up parser\n");
     pparser = bisondynlib_lookup_parser(handle);
-    //printf("bisondynlib_run: calling parser, py_input=0x%lx\n", in);
+
     if (!pparser) {
         PyErr_SetString(PyExc_RuntimeError,
                         "bisondynlib_lookup_parser() returned NULL");
@@ -52,8 +50,10 @@ PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, in
 
     (*pparser)(parser, cb, in, debug);
 
-    //printf("bisondynlib_run: back from parser\n");
-    //return result;
+    // Do not ignore a raised exception, but pass the exception through.
+    if (PyErr_Occurred())
+        return NULL;
+
     Py_INCREF(Py_None);
     return Py_None;
 

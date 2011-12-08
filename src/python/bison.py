@@ -324,15 +324,8 @@ class BisonParser(object):
                 print 'BisonParser._handle: call handler at line %s with: %s' \
                       % (hdlrline, str((targetname, option, names, values)))
 
-            #self.last = handler(target=targetname, option=option, names=names,
-            #                    values=values)
-            try:
-                self.last = handler(target=targetname, option=option,
-                                    names=names, values=values)
-            except Exception as e:
-                #traceback.print_exception(*sys.exc_info())
-                return self.error(e, sys.exc_info())
-            #    raise
+            self.last = handler(target=targetname, option=option, names=names,
+                                values=values)
 
             #if self.verbose:
             #    print 'handler for %s returned %s' \
@@ -396,11 +389,11 @@ class BisonParser(object):
         while not self.file.closed:
             # do the parsing job, spew if error
             self.last = None
-            self.last_error = None
-            self.engine.runEngine(debug)
 
-            if self.last_error:
-                self.report_last_error(filename, self.last_error)
+            try:
+                self.engine.runEngine(debug)
+            except Exception as e:
+                self.report_last_error(filename, e)
 
             if self.verbose:
                 print 'Parser.run: back from engine'
@@ -442,24 +435,24 @@ class BisonParser(object):
 
         return bytes
 
-    def _error(self, linenum, msg, tok):
-        # TODO: should this function be removed?
-        print 'Parser: line %s: syntax error "%s" before "%s"' \
-              % (linenum, msg, tok)
+    #def _error(self, linenum, msg, tok):
+    #    # TODO: should this function be removed?
+    #    print 'Parser: line %s: syntax error "%s" before "%s"' \
+    #          % (linenum, msg, tok)
 
-    def error(self, exception, traceback_info):
-        """
-        Return the result of this method from a handler to notify a syntax error
-        """
-        # TODO: should this function be removed?
-        self.last_error = BisonError(exception, traceback_info)
+    #def error(self, exception, traceback_info):
+    #    """
+    #    Return the result of this method from a handler to notify a syntax error
+    #    """
+    #    # TODO: should this function be removed?
+    #    self.last_error = BisonError(exception, traceback_info)
 
-        return self.last_error
+    #    return self.last_error
 
-    def exception(self, exception):
-        # TODO: should this function be removed?
-        self.lastexception = exception
-        return BisonException(exception)
+    #def exception(self, exception):
+    #    # TODO: should this function be removed?
+    #    self.lastexception = exception
+    #    return BisonException(exception)
 
     def report_last_error(self, filename, error):
         if filename != None:
@@ -478,11 +471,13 @@ class BisonParser(object):
 
             print >>sys.stderr, msg
         else:
-            print error
             if not self.interactive:
-                raise error.value
+                raise
 
-            traceback.print_exception(*error.traceback_info)
+            if self.verbose:
+                traceback.print_exc()
+
+            print 'ERROR:', error
 
     def toxml(self):
         """

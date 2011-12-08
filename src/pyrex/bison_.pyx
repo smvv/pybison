@@ -88,6 +88,7 @@ cdef public object py_callback(object parser, char *target, int option, \
     Py_INCREF(names)
     Py_INCREF(values)
 
+    # Construct handler's names and values list.
     for i in range(nargs):
         termname = <char*>va_arg(ap, str_type)
         PyList_SetItem(names, i, termname)
@@ -103,23 +104,15 @@ cdef public object py_callback(object parser, char *target, int option, \
         PyList_SetItem(values, i, valobj)
         Py_INCREF(valobj)
 
-    #if parser.verbose:
-    #    print 'py_callback: calling handler:', \
-    #          (target, option, names, values)
-
+    va_end(ap)
 
     # Set the signal handler and a timeout alarm
     #signal.signal(signal.SIGALRM, parser.handle_timeout)
     #signal.alarm(parser.timeout)
 
-    va_end(ap)
-
     res = parser._handle(target, option, names, values)
 
     #signal.alarm(0)
-
-    #if parser.verbose:
-    #    print 'py_callback: handler returned:', res
 
     return res
 
@@ -280,36 +273,11 @@ cdef class ParserEngine:
     def generate_exception_handler(self):
         s = ''
 
-        #s = s + '          if ($$ && $$ != Py_None && PyObject_HasAttrString($$, "_pyBisonError"))\n'
-        #s = s + '          {\n'
-        #s = s + ' yyerror(PyString_AsString(PyObject_GetAttrString(py_parser, "last_error")));\n'
-        #s = s + '             Py_INCREF(Py_None);\n'
-        #s = s + '             YYERROR;\n'
-        #s = s + '          }\n'
-
-        s += '          if ($$ && $$ != Py_None)\n'
         s += '          {\n'
-        s += '            if (PyObject_HasAttrString($$, "_pyBisonError"))\n'
-        s += '            {\n'
-        s += '              //PyObject* last_error = PyObject_GetAttrString(py_parser, "last_error");\n'
-        s += '              //if (last_error && PyString_Check(last_error))\n'
-        s += '              //  yyerror(PyString_AsString(last_error));\n'
-        s += '              //else\n'
-        s += '              //  yyerror("No \\"last_error\\" attribute set in BisonError or not a string");\n'
-        s += '              Py_INCREF(Py_None);\n'
+        s += '            PyObject* obj = PyErr_Occurred();\n'
+        s += '            if (obj)\n'
         s += '              YYERROR;\n'
-        s += '            }\n'
         s += '          }\n'
-        #s += '          else\n'
-        #s += '          {\n'
-        #s += '            PyObject* obj = PyErr_Occurred();\n'
-        #s += '            if (obj)\n'
-        #s += '            {\n'
-        #s += '              fprintf(stderr, "exception caught in bison_:\\n");\n'
-        #s += '              PyErr_Print();\n'
-        #s += '              YYERROR;\n'
-        #s += '            }\n'
-        #s += '          }\n'
 
         return s
 
