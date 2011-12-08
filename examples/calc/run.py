@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import readline
 import sys
 
 sys.path.insert(0, '../../build/lib.linux-x86_64-2.7/')

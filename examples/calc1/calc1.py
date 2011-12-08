@@ -3,9 +3,10 @@
 A more advanced calculator example, with variable storage and scientific
 functions (courtesy of python 'math' module)
 """
-import sys, math, readline
+import math
 
-from bison import BisonParser, BisonNode, BisonError
+from bison import BisonParser
+
 
 class Parser(BisonParser):
     """

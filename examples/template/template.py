@@ -11,7 +11,7 @@ You can do much worse than to copy this file
 somewhere, and tinker away to your heart's content.
 """
 
-import sys, traceback
+import sys
 
 from bison import BisonParser, BisonNode
 

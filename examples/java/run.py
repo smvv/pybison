@@ -25,7 +25,7 @@ else:
 
 src = "I2PClient.java"
 
-p = myjava.Parser(verbose=verbose)
+p = javaparser.Parser(verbose=verbose)
 
 print "delmebld.py: running parser on HelloWorldApp.java"
 res = p.run(file=src)

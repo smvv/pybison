@@ -2,9 +2,7 @@
 """
 A simple pybison parser program implementing a calculator
 """
-import sys
-
-from bison import BisonParser, BisonNode
+from bison import BisonParser
 
 class Parser(BisonParser):
     """
@@ -18,7 +16,7 @@ class Parser(BisonParser):
               'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW',
               'LPAREN', 'RPAREN',
               'NEWLINE', 'QUIT']
-    
+
     # ------------------------------
     # precedences
     # ------------------------------
@@ -28,7 +26,7 @@ class Parser(BisonParser):
         ('left', ('NEG', )),
         ('right', ('POW', )),
         )
-    
+
     # ------------------------------------------------------------------
     # override default read method with a version that prompts for input
     # ------------------------------------------------------------------
@@ -37,7 +35,7 @@ class Parser(BisonParser):
             return raw_input("> ") + "\n"
         except EOFError:
             return ''
-    
+
     # ---------------------------------------------------------------
     # These methods are the python handlers for the bison targets.
     # (which get called by the bison code each time the corresponding
@@ -47,17 +45,17 @@ class Parser(BisonParser):
     # you are doing - they are in bison rule syntax, and are passed
     # verbatim to bison to build the parser engine library.
     # ---------------------------------------------------------------
-    
+
     # Declare the start target here (by name)
     start = "input"
-    
+
     def on_input(self, target, option, names, values):
         """
         input :
               | input line
         """
         return
-    
+
     def on_line(self, target, option, names, values):
         """
         line : NEWLINE
@@ -65,7 +63,7 @@ class Parser(BisonParser):
         """
         if option == 1:
             print values[0]
-    
+
     def on_exp(self, target, option, names, values):
         """
         exp : NUMBER
@@ -94,7 +92,7 @@ class Parser(BisonParser):
             return values[0] ** values[2]
         elif option == 7:
             return values[1]
-    
+
     # -----------------------------------------
     # raw lex script, verbatim here
     # -----------------------------------------
@@ -111,9 +109,9 @@ class Parser(BisonParser):
     #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
     #define YY_INPUT(buf,result,max_size) { (*py_input)(py_parser, buf, &result, max_size); }
     %}
-    
+
     %%
-    
+
     [0-9]+ { returntoken(NUMBER); }
     "("    { returntoken(LPAREN); }
     ")"    { returntoken(RPAREN); }
@@ -123,13 +121,13 @@ class Parser(BisonParser):
     "**"   { returntoken(POW); }
     "/"    { returntoken(DIVIDE); }
     "quit" { printf("lex: got QUIT\n"); yyterminate(); returntoken(QUIT); }
-    
+
     [ \t\v\f]             {}
     [\n]		{yylineno++; returntoken(NEWLINE); }
     .       { printf("unknown char %c ignored, yytext=0x%lx\n", yytext[0], yytext); /* ignore bad chars */}
-    
+
     %%
-    
+
     yywrap() { return(1); }
     """
 
