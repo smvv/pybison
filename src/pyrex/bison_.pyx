@@ -130,7 +130,11 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     if parser.verbose:
         print '\npy_input: want to read up to %s bytes' % max_size
 
-    raw = parser.read(max_size)
+    try:
+        raw = parser.read(max_size)
+    except KeyboardInterrupt:
+        raw = ''
+
     buflen = PyInt_AsLong(len(raw))
     result[0] = buflen
     memcpy(buf, PyString_AsString(raw), buflen)
