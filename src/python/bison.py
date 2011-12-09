@@ -21,7 +21,7 @@ import sys
 import traceback
 
 from bison_ import ParserEngine
-
+from .node import BisonNode
 
 class BisonSyntaxError(Exception):
     pass
@@ -100,7 +100,7 @@ class BisonParser(object):
 
     # Class to use by default for creating new parse nodes. If set to None,
     # BisonNode will be used.
-    default_node_class = None
+    default_node_class = BisonNode
 
     def __init__(self, **kw):
         """
@@ -183,10 +183,6 @@ class BisonParser(object):
         else:
             if self.verbose:
                 print 'no handler for %s, using default' % targetname
-
-            if not self.default_node_class:
-                from .node import BisonNode
-                self.default_node_class = BisonNode
 
             self.last = self.default_node_class(targetname, option=option,
                                                 names=names, values=values)
