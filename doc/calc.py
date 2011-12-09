@@ -4,10 +4,11 @@ A simple pybison parser program implementing a calculator
 """
 from bison import BisonParser
 
+
 class Parser(BisonParser):
     """
-    Implements the calculator parser. Grammar rules are defined in the method docstrings.
-    Scanner rules are in the 'lexscript' attribute.
+    Implements the calculator parser. Grammar rules are defined in the method
+    docstrings. Scanner rules are in the 'lexscript' attribute.
     """
     # ----------------------------------------------------------------
     # lexer tokens - these must match those in your lex script (below)
@@ -105,9 +106,13 @@ class Parser(BisonParser):
     #define YYSTYPE void *
     #include "tokens.h"
     extern void *py_parser;
-    extern void (*py_input)(PyObject *parser, char *buf, int *result, int max_size);
-    #define returntoken(tok) yylval = PyString_FromString(strdup(yytext)); return (tok);
-    #define YY_INPUT(buf,result,max_size) { (*py_input)(py_parser, buf, &result, max_size); }
+    extern void (*py_input)(PyObject *parser, char *buf, int *result,
+                            int max_size);
+    #define returntoken(tok) \
+            yylval = PyString_FromString(strdup(yytext)); return (tok);
+    #define YY_INPUT(buf,result,max_size) { \
+        (*py_input)(py_parser, buf, &result, max_size); \
+    }
     %}
 
     %%
@@ -122,9 +127,10 @@ class Parser(BisonParser):
     "/"    { returntoken(DIVIDE); }
     "quit" { printf("lex: got QUIT\n"); yyterminate(); returntoken(QUIT); }
 
-    [ \t\v\f]             {}
-    [\n]		{yylineno++; returntoken(NEWLINE); }
-    .       { printf("unknown char %c ignored, yytext=0x%lx\n", yytext[0], yytext); /* ignore bad chars */}
+    [ \t\v\f] {}
+    [\n]   {yylineno++; returntoken(NEWLINE); }
+    .      { printf("unknown char %c ignored, yytext=0x%lx\n", yytext[0],
+                    yytext); /* ignore bad chars */}
 
     %%
 
@@ -132,5 +138,4 @@ class Parser(BisonParser):
     """
 
 if __name__ == '__main__':
-    p = Parser()
-    p.run()
+    Parser().run()

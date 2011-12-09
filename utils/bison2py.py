@@ -18,16 +18,16 @@ def usage(s=None):
     progname = sys.argv[0]
 
     if s:
-        print progname+": "+s
+        print progname + ': ' + s
 
-    print "\n".join([
-        "Usage: %s [-c] basefilename" % progname,
-        "   or: %s [-c] grammarfile.y lexfile.l pyfile.py" % progname,
-        "(generates a boilerplate python file from a grammar and lex file)",
-        "The first form uses 'basefilename' as base for all files, so:",
-        "  %s fred" % progname,
-        "is equivalent to:",
-        "  %s fred.y fred.l fred.py" % progname,
+    print '\n'.join([
+        'Usage: %s [-c] basefilename' % progname,
+        '   or: %s [-c] grammarfile.y lexfile.l pyfile.py' % progname,
+        '(generates a boilerplate python file from a grammar and lex file)',
+        'The first form uses "basefilename" as base for all files, so:',
+        '  %s fred' % progname,
+        'is equivalent to:',
+        '  %s fred.y fred.l fred.py' % progname,
         '',
         'The "-c" argument causes the creation of a unique node class',
         'for each parse target - highly recommended for complex grammars',
@@ -52,13 +52,13 @@ def main():
 
     if argc == 2:
         basename = argv[1]
-        bisonfile = basename+".y"
-        lexfile = basename+".l"
-        pyfile = basename+".py"
+        bisonfile = basename + '.y'
+        lexfile = basename + '.l'
+        pyfile = basename + '.py'
     elif argc == 4:
         bisonfile, lexfile, pyfile = argv[1:4]
     else:
-        usage("Bad argument count")
+        usage('Bad argument count')
 
     bisonToPython(bisonfile, lexfile, pyfile, generateClasses)
 

@@ -18,190 +18,17 @@ for a commercial license.
 """
 
 import sys
-#import imp
 import traceback
-import xml.dom
-import xml.dom.minidom
-import types
-#import distutils.sysconfig
-#import distutils.ccompiler
 
 from bison_ import ParserEngine
 
 
-class ParserSyntaxError(Exception):
+class BisonSyntaxError(Exception):
     pass
 
 
 class TimeoutError(Exception):
     pass
-
-
-class BisonError(object):
-    """
-    Flags an error to yyparse()
-
-    You should return this in your actions to notify a syntax error
-    """
-    _pyBisonError = 1
-
-    def __init__(self, error, traceback_info):
-        self.value = error
-        self.traceback_info = traceback_info
-
-
-class BisonException(Exception):
-    _pyBisonError = 1
-
-    def __init__(self, value='syntax error'):
-        self.value = value
-
-
-class BisonNode:
-    """
-    Generic class for wrapping parse targets.
-
-    Arguments:
-        - targetname - the name of the parse target being wrapped.
-        - items - optional - a list of items comprising a clause
-          in the target rule - typically this will only be used
-          by the PyBison callback mechanism.
-
-    Keywords:
-        - any keywords you want (except 'items'), with any type of value.
-          keywords will be stored as attributes in the constructed object.
-    """
-
-    def __init__(self, **kw):
-
-        self.__dict__.update(kw)
-
-        # ensure some default attribs
-        self.target = kw.get('target', 'UnnamedTarget')
-        self.names = kw.get('names', [])
-        self.values = kw.get('values', [])
-        self.option = kw.get('option', 0)
-
-        # mirror this dict to simplify dumping
-        self.kw = kw
-
-    def __str__(self):
-        return '<BisonNode:%s>' % self.target
-
-    def __repr__(self):
-        return str(self)
-
-    def __getitem__(self, item):
-        """
-        Retrieves the ith value from this node, or child nodes
-
-        If the subscript is a single number, it will be used as an
-        index into this node's children list.
-
-        If the subscript is a list or tuple, we recursively fetch
-        the item by using the first element as an index into this
-        node's children, the second element as an index into that
-        child node's children, and so on
-        """
-        if type(item) in [type(0), type(0L)]:
-            return self.values[item]
-        elif type(item) in [type(()), type([])]:
-            if len(item) == 0:
-                return self
-            return self.values[item[0]][item[1:]]
-        else:
-            raise TypeError('Can only index %s objects with an int or a'
-                            ' list/tuple' % self.__class.__name__)
-
-    def __len__(self):
-
-        return len(self.values)
-
-    def __getslice__(self, fromidx, toidx):
-        return self.values[fromidx:toidx]
-
-    def __iter__(self):
-        return iter(self.values)
-
-    def dump(self, indent=0):
-        """
-        For debugging - prints a recursive dump of a parse tree node and its children
-        """
-        specialAttribs = ['option', 'target', 'names', 'values']
-        indents = ' ' * indent * 2
-        #print "%s%s: %s %s" % (indents, self.target, self.option, self.names)
-        print '%s%s:' % (indents, self.target)
-
-        for name, val in self.kw.items() + zip(self.names, self.values):
-            if name in specialAttribs or name.startswith('_'):
-                continue
-
-            if isinstance(val, BisonNode):
-                val.dump(indent+1)
-            else:
-                print indents + '  %s=%s' % (name, val)
-
-    def toxml(self):
-        """
-        Returns an xml serialisation of this node and its children, as a raw string
-
-        Called on the toplevel node, the xml is a representation of the
-        entire parse tree.
-        """
-        return self.toxmldoc().toxml()
-
-    def toprettyxml(self, indent='  ', newl='\n', encoding=None):
-        """
-        Returns a human-readable xml serialisation of this node and its
-        children.
-        """
-        return self.toxmldoc().toprettyxml(indent=indent,
-                                           newl=newl,
-                                           encoding=encoding)
-
-    def toxmldoc(self):
-        """
-        Returns the node and its children as an xml.dom.minidom.Document
-        object.
-        """
-        d = xml.dom.minidom.Document()
-        d.appendChild(self.toxmlelem(d))
-        return d
-
-    def toxmlelem(self, docobj):
-        """
-        Returns a DOM Element object of this node and its children.
-        """
-        specialAttribs = ['option', 'target', 'names', 'values']
-
-        # generate an xml element obj for this node
-        x = docobj.createElement(self.target)
-
-        # set attribs
-        for name, val in self.kw.items():
-            if name in ['names', 'values'] or name.startswith('_'):
-                continue
-
-            x.setAttribute(name, str(val))
-        #x.setAttribute('target', self.target)
-        #x.setAttribute('option', self.option)
-
-        # and add the children
-        for name, val in zip(self.names, self.values):
-            if name in specialAttribs or name.startswith('_'):
-                continue
-
-            if isinstance(val, BisonNode):
-                x.appendChild(val.toxmlelem(docobj))
-            else:
-                sn = docobj.createElement(name)
-                sn.setAttribute('target', name)
-                tn = docobj.createTextNode(val)
-                sn.appendChild(tn)
-                x.appendChild(sn)
-
-        # done
-        return x
 
 
 class BisonParser(object):
@@ -215,43 +42,65 @@ class BisonParser(object):
     # ---------------------------------------
     # override these if you need to
 
-    # command and options for running yacc/bison, except for filename arg
+    # Command and options for running yacc/bison, except for filename arg
     bisonCmd = ['bison', '-d', '-v', '-t']
 
     bisonFile = 'tmp.y'
     bisonCFile = 'tmp.tab.c'
-    bisonHFile = 'tmp.tab.h' # name of header file generated by bison cmd
 
-    bisonCFile1 = 'tmp.bison.c' # c output file from bison gets renamed to this
-    bisonHFile1 = 'tokens.h' # bison-generated header file gets renamed to this
+    # Name of header file generated by bison cmd.
+    bisonHFile = 'tmp.tab.h'
 
-    flexCmd = ['flex', ] # command and options for running [f]lex, except for filename arg
+    # C output file from bison gets renamed to this.
+    bisonCFile1 = 'tmp.bison.c'
+
+    # Bison-generated header file gets renamed to this.
+    bisonHFile1 = 'tokens.h'
+
+    # command and options for running [f]lex, except for filename arg.
+    flexCmd = ['flex', ]
     flexFile = 'tmp.l'
     flexCFile = 'lex.yy.c'
 
-    flexCFile1 = 'tmp.lex.c' # c output file from lex gets renamed to this
+    # C output file from flex gets renamed to this.
+    flexCFile1 = 'tmp.lex.c'
 
-    cflags_pre = ['-fPIC']  # = CFLAGS added before all arguments.
-    cflags_post = ['-O3','-g']  # = CFLAGS added after all arguments.
+    # CFLAGS added before all command line arguments.
+    cflags_pre = ['-fPIC']
 
-    buildDirectory = './' # Directory used to store the generated / compiled files.
-    debugSymbols = 1  # Add debugging symbols to the binary files.
+    # CFLAGS added after all command line arguments.
+    cflags_post = ['-O3', '-g']
 
+    # Directory used to store the generated / compiled files.
+    buildDirectory = './'
+
+    # Add debugging symbols to the binary files.
+    debugSymbols = 1
+
+    # Enable verbose debug message sent to stdout.
     verbose = 0
 
-    timeout = 1  # Timeout in seconds after which a computation is terminated.
+    # Timeout in seconds after which the parser is terminated.
+    # TODO: this is currently not implemented.
+    timeout = 1
 
-    file = None # default to sys.stdin
+    # Default to sys.stdin.
+    file = None
 
-    last = None # last parsed target, top of parse tree
+    # Last parsed target, top of parse tree.
+    last = None
 
-    last_error = None # gets set if there was an error
+    # Enable this to keep all temporary engine build files.
+    keepfiles = 0
 
-    keepfiles = 0 # set to 1 to keep temporary engine build files
+    # Prefix of the shared object / dll file. Defaults to 'modulename-engine'.
+    # If the module is executed directly, "__main__" will be used (since that
+    # that is the "module name", in that case).
+    bisonEngineLibName = None
 
-    bisonEngineLibName = None # defaults to 'modulename-engine'
-
-    defaultNodeClass = BisonNode # class to use by default for creating new parse nodes
+    # Class to use by default for creating new parse nodes. If set to None,
+    # BisonNode will be used.
+    default_node_class = None
 
     def __init__(self, **kw):
         """
@@ -313,7 +162,8 @@ class BisonParser(object):
         Tries to dispatch to on_TargetName() methods if they exist,
         otherwise wraps the target in a BisonNode object
         """
-        handler = getattr(self, 'on_'+targetname, None)
+        handler = getattr(self, 'on_' + targetname, None)
+
         if handler:
             if self.verbose:
                 try:
@@ -333,10 +183,13 @@ class BisonParser(object):
         else:
             if self.verbose:
                 print 'no handler for %s, using default' % targetname
-            self.last = BisonNode(targetname, option=option, names=names, values=values)
 
-        # reset any resulting errors (assume they've been handled)
-        #self.last_error = None
+            if not self.default_node_class:
+                from .node import BisonNode
+                self.default_node_class = BisonNode
+
+            self.last = self.default_node_class(targetname, option=option,
+                                                names=names, values=values)
 
         # assumedly the last thing parsed is at the top of the tree
         return self.last
@@ -435,39 +288,34 @@ class BisonParser(object):
 
         return bytes
 
-    #def _error(self, linenum, msg, tok):
-    #    # TODO: should this function be removed?
-    #    print 'Parser: line %s: syntax error "%s" before "%s"' \
-    #          % (linenum, msg, tok)
-
-    #def error(self, exception, traceback_info):
-    #    """
-    #    Return the result of this method from a handler to notify a syntax error
-    #    """
-    #    # TODO: should this function be removed?
-    #    self.last_error = BisonError(exception, traceback_info)
-
-    #    return self.last_error
-
-    #def exception(self, exception):
-    #    # TODO: should this function be removed?
-    #    self.lastexception = exception
-    #    return BisonException(exception)
-
     def report_last_error(self, filename, error):
+        """
+        Report a raised exception. Depending on the mode in which the parser is
+        running, it will:
+        
+         - write a verbose message to stderr (verbose=True; interactive=True).
+           The written error message will include the type, value and traceback
+           of the raised exception.
+
+         - write a minimal message to stderr (verbose=False; interactive=True).
+           The written error message will only include the type and value of
+           the raised exception.
+
+        """
+
         if filename != None:
             msg = '%s:%d: "%s" near "%s"' \
                     % ((filename,) + error)
 
             if not self.interactive:
-                raise ParserSyntaxError(msg)
+                raise BisonSyntaxError(msg)
 
             print >>sys.stderr, msg
         elif hasattr(error, '__getitem__') and isinstance(error[0], int):
             msg = 'Line %d: "%s" near "%s"' % error
 
             if not self.interactive:
-                raise ParserSyntaxError(msg)
+                raise BisonSyntaxError(msg)
 
             print >>sys.stderr, msg
         else:
@@ -478,122 +326,3 @@ class BisonParser(object):
                 traceback.print_exc()
 
             print 'ERROR:', error
-
-    def toxml(self):
-        """
-        Serialises the parse tree and returns it as a raw xml string
-        """
-        # TODO: should this function be moved to another file?
-        return self.last.toxml()
-
-    def toxmldoc(self):
-        """
-        Returns an xml.dom.minidom.Document object containing the parse tree
-        """
-        # TODO: should this function be moved to another file?
-        return self.last.toxmldoc()
-
-    def toprettyxml(self):
-        """
-        Returns a human-readable xml representation of the parse tree
-        """
-        # TODO: should this function be moved to another file?
-        return self.last.toprettyxml()
-
-    def loadxml(self, raw, namespace=None):
-        """
-        Loads a parse tree from raw xml text
-
-        Stores it in the '.last' attribute, which is where the root node
-        of parsed text gets stored
-
-        Arguments:
-            - raw - string containing the raw xml
-            - namespace - a dict or module object, where the node classes required for
-              reconstituting the parse tree, can be found
-
-        Returns:
-            - root node object of reconstituted parse tree
-        """
-        # TODO: should this function be moved to another file?
-        doc = xml.dom.minidom.parseString(raw)
-        tree = self.loadxmldoc(doc, namespace)
-        self.last = tree
-        return tree
-
-    def loadxmldoc(self, xmldoc, namespace=None):
-        """
-        Returns a reconstituted parse tree, loaded from an
-        xml.dom.minidom.Document instance
-
-        Arguments:
-            - xmldoc - an xml.dom.minidom.Document instance
-            - namespace - a dict from which to find the classes needed
-              to translate the document into a tree of parse nodes
-        """
-        # TODO: should this function be moved to another file?
-        return self.loadxmlobj(xmldoc.childNodes[0], namespace)
-
-    def loadxmlobj(self, xmlobj, namespace=None):
-        """
-        Returns a node object, being a parse tree, reconstituted from an
-        xml.dom.minidom.Element object
-
-        Arguments:
-            - xmlobj - an xml.dom.minidom.Element instance
-            - namespace - a namespace from which the node classes
-              needed for reconstituting the tree, can be found
-        """
-        # TODO: should this function be moved to another file?
-        # check on namespace
-        if type(namespace) is types.ModuleType:
-            namespace = namespace.__dict__
-        elif namespace == None:
-            namespace = globals()
-
-        objname = xmlobj.tagName
-        classname = objname + '_Node'
-        classobj = namespace.get(classname, None)
-
-        namespacekeys = namespace.keys()
-
-        # barf if node is not a known parse node or token
-        if (not classobj) and objname not in self.tokens:
-            raise Exception('Cannot reconstitute %s: can\'t find required'
-                    ' node class or token %s' % (objname, classname))
-
-        if classobj:
-            nodeobj = classobj()
-
-            # add the attribs
-            for k,v in xmlobj.attributes.items():
-                setattr(nodeobj, k, v)
-        else:
-            nodeobj = None
-
-        #print '----------------'
-        #print 'objname=%s' % repr(objname)
-        #print 'classname=%s' % repr(classname)
-        #print 'classobj=%s' % repr(classobj)
-        #print 'nodeobj=%s' % repr(nodeobj)
-
-        # now add the children
-        for child in xmlobj.childNodes:
-            #print '%s attributes=%s' % (child, child.attributes.items())
-            childname = child.attributes['target'].value
-            #print 'childname=%s' % childname
-            if childname + '_Node' in namespacekeys:
-                #print 'we have a node for class %s' % classname
-                childobj = self.loadxmlobj(child, namespace)
-            else:
-                # it's a token
-                childobj = child.childNodes[0].nodeValue
-                #print 'got token %s=%s' % (childname, childobj)
-
-            nodeobj.names.append(childname)
-            nodeobj.values.append(childobj)
-
-        return nodeobj
-
-    def _globals(self):
-        return globals().keys()

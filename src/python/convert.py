@@ -187,7 +187,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
             tmp = map(' '.join, options)
 
             # totally self-indulgent grammatical pedantry
-            if target[0].lower() in ['a','e','i','o','u']:
+            if target[0].lower() in ['a', 'e', 'i', 'o', 'u']:
                 plural = 'n'
             else:
                 plural = ''
@@ -204,7 +204,6 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
                 '        ParseNode.dump(self, indent)',
                 '\n',
                 ]))
-
 
     # start churning out the class dec
     pyfile.write('\n'.join([
@@ -307,7 +306,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
             '            : ' + '\n            | '.join(tmp),
             '        """',
             '        return %s(' % nodeClassName,
-            '            target=\'%s\','  % target,
+            '            target=\'%s\',' % target,
             '            option=option,',
             '            names=names,',
             '            values=values)',
