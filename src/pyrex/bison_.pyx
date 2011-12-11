@@ -128,6 +128,9 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     except KeyboardInterrupt:
         raw = ''
 
+    if hasattr(parser, 'hook_read'):
+        raw = parser.hook_read(raw)
+
     buflen = PyInt_AsLong(len(raw))
     result[0] = buflen
     memcpy(buf, PyString_AsString(raw), buflen)
