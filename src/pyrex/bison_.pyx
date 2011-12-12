@@ -114,6 +114,9 @@ cdef public object py_callback(object parser, char *target, int option, \
 
     #signal.alarm(0)
 
+    if hasattr(parser, 'hook_handler'):
+        res = parser.hook_handler(target, option, names, values, res)
+
     return res
 
 # callback routine for reading input
