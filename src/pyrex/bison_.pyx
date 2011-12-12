@@ -126,13 +126,16 @@ cdef public void py_input(object parser, char *buf, int *result, int max_size):
     if parser.verbose:
         print '\npy_input: want to read up to %s bytes' % max_size
 
+    if hasattr(parser, 'hook_read_before'):
+        parser.hook_read_before()
+
     try:
         raw = parser.read(max_size)
     except KeyboardInterrupt:
         raw = ''
 
-    if hasattr(parser, 'hook_read'):
-        raw = parser.hook_read(raw)
+    if hasattr(parser, 'hook_read_after'):
+        raw = parser.hook_read_after(raw)
 
     buflen = PyInt_AsLong(len(raw))
     result[0] = buflen
