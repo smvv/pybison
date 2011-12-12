@@ -278,8 +278,10 @@ cdef class ParserEngine:
 
         s += '          {\n'
         s += '            PyObject* obj = PyErr_Occurred();\n'
-        s += '            if (obj)\n'
+        s += '            if (obj) {\n'
+        s += '              //yyerror("exception raised");\n'
         s += '              YYERROR;\n'
+        s += '            }\n'
         s += '          }\n'
 
         return s
@@ -333,27 +335,46 @@ cdef class ParserEngine:
         #writelines = f.writelines
 
         # grammar file prologue
-        write("\n".join([
-            "%{",
+        write('\n'.join([
+            '%code top {',
             '',
             '#include "Python.h"',
-            "extern FILE *yyin;",
-            "extern int yylineno;"
-            "extern char *yytext;",
-            "#define YYSTYPE void*",
+            'extern FILE *yyin;',
+            #'extern int yylineno;'
+            'extern char *yytext;',
+            '#define YYSTYPE void*',
             #'extern void *py_callback(void *, char *, int, void*, ...);',
             'void *(*py_callback)(void *, char *, int, int, ...);',
             'void (*py_input)(void *, char *, int *, int);',
             'void *py_parser;',
             'char *rules_hash = "%s";' % self.parserHash,
+            '#define YYERROR_VERBOSE 1',
             '',
-            "%}",
+            '}',
+            '',
+            '%code requires {',
+            '',
+            '#define YYLTYPE YYLTYPE',
+            'typedef struct YYLTYPE',
+            '{',
+            '  int first_line;',
+            '  int first_column;',
+            '  int last_line;',
+            '  int last_column;',
+            '  char *filename;',
+            '} YYLTYPE;',
+            #'',
+            #'YYLTYPE yylloc; /* location data */'
+            '',
+            '}',
+            '',
+            '%locations',
             '',
             ]))
 
         # write out tokens and start target dec
-        write("%%token %s\n\n" % " ".join(gTokens))
-        write("%%start %s\n\n" % gStart)
+        write('%%token %s\n\n' % ' '.join(gTokens))
+        write('%%start %s\n\n' % gStart)
 
         # write out precedences
         for p in gPrecedences:
@@ -448,44 +469,52 @@ cdef class ParserEngine:
             except:
                 traceback.print_exc()
 
-        write("\n\n%%\n\n")
+        write('\n\n%%\n\n')
 
         # now generate C code
-        epilogue = "\n".join([
+        epilogue = '\n'.join([
             'void do_parse(void *parser1,',
-            '              void *(*cb)(void *, char *, int, int, void *, ...),',
+            '              void *(*cb)(void *, char *, int, int, ...),',
             '              void (*in)(void *, char*, int *, int),',
             '              int debug',
             '              )',
             '{',
-            '   //printf("Not calling yyparse\\n");',
-            '   //return;',
             '   py_callback = cb;',
             '   py_input = in;',
-            "   py_parser = parser1;",
-            "   yydebug = debug;",
-            "   //yyin = stdin;",
-            '   //printf("calling yyparse(), in=0x%lx\\n", py_input);',
-            "   yyparse();",
-            '   //printf("Back from parser\\n");',
-            "}",
-            "int yyerror(char *mesg)",
-            "{",
-            '  //printf("yytext=0x%lx\\n", yytext);',
-            '  PyObject *args = PyTuple_New(3);',
-            '  int ret;',
+            '   py_parser = parser1;',
+            '   yydebug = debug;',
+            '   yyparse();',
+            '}',
             '',
-            '  PyTuple_SetItem(args, 0, PyInt_FromLong(yylineno+1));',
-            '  PyTuple_SetItem(args, 1, PyString_FromString(mesg));',
-            '  PyTuple_SetItem(args, 2, PyString_FromString(yytext));',
+            'int yyerror(char *msg)',
+            '{',
+            '  PyObject *fn = PyObject_GetAttrString((PyObject *)py_parser,',
+            '                                        "report_syntax_error");',
+            '  if (!fn)',
+            '      return 1;',
             '',
-            '  ret = PyObject_SetAttrString((PyObject *)py_parser, "last_error", args);',
-            '  //printf("PyObject_SetAttrString: %d\\n", ret);',
+            '  PyObject *args;',
+            '  args = Py_BuildValue("(s,s,i,i,i,i)", msg, yytext,',
+            '                       yylloc.first_line, yylloc.first_column,',
+            '                       yylloc.last_line, yylloc.last_column);',
             '',
-            '  //printf("line %d: %s before %s\\n", yylineno+1, mesg, yytext);',
-            "  //exit(0);",
-            "}",
-            ]) + "\n"
+            '  if (!args)',
+            '      return 1;',
+            #'',
+            #'  fprintf(stderr, "%d.%d-%d.%d: error: \'%s\' before \'%s\'.",',
+            #'          yylloc.first_line, yylloc.first_column,',
+            #'          yylloc.last_line, yylloc.last_column, msg, yytext);',
+            '',
+            '  PyObject *res = PyObject_CallObject(fn, args);',
+            '  Py_DECREF(args);',
+            '',
+            '  if (!res)',
+            '      return 1;',
+            '',
+            '  Py_DECREF(res);',
+            '  return 0;',
+            '}',
+            ]) + '\n'
         write(epilogue)
 
         # done with grammar file

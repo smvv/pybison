@@ -24,8 +24,11 @@ from bison_ import ParserEngine
 from .node import BisonNode
 
 class BisonSyntaxError(Exception):
-    pass
+    def __init__(self, msg, args):
+        super(BisonSyntaxError, self).__init__(msg)
 
+        self.first_line, self.first_col, self.last_line, self.last_col, \
+                self.message, self.token_value = args
 
 class TimeoutError(Exception):
     pass
@@ -184,8 +187,9 @@ class BisonParser(object):
             if self.verbose:
                 print 'no handler for %s, using default' % targetname
 
-            self.last = self.default_node_class(targetname, option=option,
-                                                names=names, values=values)
+            cls = self.default_node_class
+            self.last = cls(target=targetname, option=option, names=names,
+                            values=values)
 
         # assumedly the last thing parsed is at the top of the tree
         return self.last
@@ -299,26 +303,32 @@ class BisonParser(object):
 
         """
 
-        if filename != None:
-            msg = '%s:%d: "%s" near "%s"' \
-                    % ((filename,) + error)
+        #if filename != None:
+        #    msg = '%s:%d: "%s" near "%s"' \
+        #            % ((filename,) + error)
 
-            if not self.interactive:
-                raise BisonSyntaxError(msg)
+        #    if not self.interactive:
+        #        raise BisonSyntaxError(msg)
 
-            print >>sys.stderr, msg
-        elif hasattr(error, '__getitem__') and isinstance(error[0], int):
-            msg = 'Line %d: "%s" near "%s"' % error
+        #    print >>sys.stderr, msg
+        #elif hasattr(error, '__getitem__') and isinstance(error[0], int):
+        #    msg = 'Line %d: "%s" near "%s"' % error
 
-            if not self.interactive:
-                raise BisonSyntaxError(msg)
+        #    if not self.interactive:
+        #        raise BisonSyntaxError(msg)
 
-            print >>sys.stderr, msg
-        else:
-            if not self.interactive:
-                raise
+        #    print >>sys.stderr, msg
+        #else:
+        if not self.interactive:
+            raise
 
-            if self.verbose:
-                traceback.print_exc()
+        if self.verbose:
+            traceback.print_exc()
 
-            print 'ERROR:', error
+        print 'ERROR:', error
+
+    def report_syntax_error(self, msg, yytext, first_line, first_col,
+            last_line, last_col):
+        yytext = yytext.replace('\n', '\\n')
+        args = (first_line, first_col, last_line, last_col, msg, yytext)
+        raise BisonSyntaxError('%d.%d-%d.%d: "%s" near "%s".' % args, args)
