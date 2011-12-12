@@ -251,6 +251,9 @@ class BisonParser(object):
             if self.verbose:
                 print 'Parser.run: back from engine'
 
+            if hasattr(self, 'hook_run'):
+                self.last = self.hook_run(filename, self.last)
+
             if self.verbose and not self.file.closed:
                 print 'last:', self.last
 
