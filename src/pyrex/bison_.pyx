@@ -535,8 +535,8 @@ cdef class ParserEngine:
         tmp = []
         for line in lexLines:
             tmp.append(line.strip())
-        f = open(buildDirectory + parser.flexFile, "w")
-        f.write("\n".join(tmp) + "\n")
+        f = open(buildDirectory + parser.flexFile, 'w')
+        f.write('\n'.join(tmp) + '\n')
         f.close()
 
         # create and set up a compiler object
@@ -545,7 +545,7 @@ cdef class ParserEngine:
 
         # -----------------------------------------
         # Now run bison on the grammar file
-        #os.system("bison -d tmp.y")
+        #os.system('bison -d tmp.y')
         bisonCmd = parser.bisonCmd + [buildDirectory + parser.bisonFile]
 
         if parser.verbose:
@@ -554,7 +554,7 @@ cdef class ParserEngine:
         env.spawn(bisonCmd)
 
         if parser.verbose:
-            print "renaming bison output files"
+            print 'renaming bison output files'
             print '%s => %s%s' % (parser.bisonCFile, buildDirectory,
                                   parser.bisonCFile1)
             print '%s => %s%s' % (parser.bisonHFile, buildDirectory,
@@ -572,7 +572,7 @@ cdef class ParserEngine:
 
         # -----------------------------------------
         # Now run lex on the lex file
-        #os.system("lex tmp.l")
+        #os.system('lex tmp.l')
         flexCmd = parser.flexCmd + [buildDirectory + parser.flexFile]
 
         if parser.verbose:
@@ -647,6 +647,15 @@ cdef class ParserEngine:
                     os.unlink(f)
                 except:
                     print "Warning: failed to delete temporary file %s" % f
+
+        if parser.verbose:
+            print 'deleting temporary bison output files:'
+
+        for f in [parser.bisonCFile, parser.bisonHFile]:
+            if parser.verbose:
+                print 'rm %s' % f
+
+            os.unlink(f)
 
     def closeLib(self):
         """
