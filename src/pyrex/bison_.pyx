@@ -627,7 +627,7 @@ cdef class ParserEngine:
         # --------------------------------------------
         # clean up, if we succeeded
         hitlist = objs[:]
-        hitlist.append(buildDirectory + "tmp.output")
+        hitlist.append("tmp.output")
 
         if os.path.isfile(libFileName):
             for name in ['bisonFile', 'bisonCFile', 'bisonHFile',
@@ -641,6 +641,7 @@ cdef class ParserEngine:
                 #print "want to delete %s" % fname
                 if fname and os.path.isfile(fname):
                     hitlist.append(fname)
+
         if not parser.keepfiles:
             for f in hitlist:
                 try:
