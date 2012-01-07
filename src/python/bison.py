@@ -295,7 +295,7 @@ class BisonParser(object):
         """
         Report a raised exception. Depending on the mode in which the parser is
         running, it will:
-        
+
          - write a verbose message to stderr (verbose=True; interactive=True).
            The written error message will include the type, value and traceback
            of the raised exception.
