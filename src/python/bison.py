@@ -105,6 +105,8 @@ class BisonParser(object):
     # BisonNode will be used.
     default_node_class = BisonNode
 
+    error_threshold = 10
+
     def __init__(self, **kw):
         """
         Abstract representation of parser
@@ -238,6 +240,8 @@ class BisonParser(object):
         if self.verbose and self.file.closed:
             print 'Parser.run(): self.file', self.file, 'is closed'
 
+        error_count = 0
+
         # TODO: add option to fail on first error.
         while not self.file.closed:
             # do the parsing job, spew if error
@@ -246,6 +250,11 @@ class BisonParser(object):
             try:
                 self.engine.runEngine(debug)
             except Exception as e:
+                error_count += 1
+
+                if error_count > self.error_threshold:
+                    raise
+
                 self.report_last_error(filename, e)
 
             if self.verbose:

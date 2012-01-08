@@ -44,6 +44,11 @@ cdef extern from "stdio.h":
 cdef extern from "string.h":
     void *memcpy(void *dest, void *src, long n)
 
+# Callback function which is invoked by target handlers
+# within the C yyparse() function.
+cdef extern from "../c/bison_callback.h":
+    object py_callback(object, char *, int option, int nargs,...)
+
 cdef extern from "../c/bisondynlib.h":
     void *bisondynlib_open(char *filename)
     int bisondynlib_close(void *handle)
@@ -53,71 +58,6 @@ cdef extern from "../c/bisondynlib.h":
     object bisondynlib_run(void *handle, object parser, void *cb, void *pyin, int debug)
 
     #int bisondynlib_build(char *libName, char *includedir)
-
-# Definitions for variadic functions (e.g. py_callback).
-cdef extern from "stdarg.h":
-    ctypedef struct va_list:
-        pass
-    ctypedef struct fake_type:
-        pass
-    void va_start(va_list, int arg)
-    void* va_arg(va_list, fake_type)
-    void va_end(va_list)
-    fake_type void_type "void *"
-    fake_type str_type "char *"
-
-# Callback function which is invoked by target handlers
-# within the C yyparse() function.
-
-#import signal
-
-cdef public object py_callback(object parser, char *target, int option, \
-        int nargs, ...):
-
-    cdef int i
-    cdef va_list ap
-    va_start(ap, <int>nargs)
-
-    cdef object valobj
-    cdef void *val
-    cdef char *termname
-
-    names = PyList_New(nargs)
-    values = PyList_New(nargs)
-
-    Py_INCREF(names)
-    Py_INCREF(values)
-
-    # Construct handler's names and values list.
-    for i in range(nargs):
-        termname = <char*>va_arg(ap, str_type)
-        PyList_SetItem(names, i, termname)
-        Py_INCREF(termname)
-
-        val = <void *>va_arg(ap, void_type)
-
-        if val:
-            valobj = <object>val
-        else:
-            valobj = None
-
-        PyList_SetItem(values, i, valobj)
-        Py_INCREF(valobj)
-
-    va_end(ap)
-
-    # Set the signal handler and a timeout alarm
-    #signal.signal(signal.SIGALRM, parser.handle_timeout)
-    #signal.alarm(parser.timeout)
-
-    res = parser._handle(target, option, names, values)
-
-    #signal.alarm(0)
-
-    if hasattr(parser, 'hook_handler'):
-        res = parser.hook_handler(target, option, names, values, res)
-
-    return res
 
 # callback routine for reading input
 cdef public void py_input(object parser, char *buf, int *result, int max_size):
