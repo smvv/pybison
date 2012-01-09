@@ -47,7 +47,8 @@ cdef extern from "string.h":
 # Callback function which is invoked by target handlers
 # within the C yyparse() function.
 cdef extern from "../c/bison_callback.h":
-    object py_callback(object, char *, int option, int nargs,...)
+    object py_callback(object, char *, int, int,...)
+    void py_input(object, char *, int *, int)
 
 cdef extern from "../c/bisondynlib.h":
     void *bisondynlib_open(char *filename)
@@ -58,37 +59,6 @@ cdef extern from "../c/bisondynlib.h":
     object bisondynlib_run(void *handle, object parser, void *cb, void *pyin, int debug)
 
     #int bisondynlib_build(char *libName, char *includedir)
-
-# callback routine for reading input
-cdef public void py_input(object parser, char *buf, int *result, int max_size):
-    cdef int buflen
-
-    if parser.verbose:
-        print '\npy_input: want to read up to %s bytes' % max_size
-
-    if hasattr(parser, 'hook_read_before'):
-        parser.hook_read_before()
-
-    try:
-        raw = parser.read(max_size)
-    except KeyboardInterrupt:
-        raw = ''
-
-    if hasattr(parser, 'hook_read_after'):
-        raw = parser.hook_read_after(raw)
-
-    buflen = PyInt_AsLong(len(raw))
-    result[0] = buflen
-    memcpy(buf, PyString_AsString(raw), buflen)
-
-    if parser.verbose:
-        print '\npy_input: got %s bytes' % buflen
-
-    if buflen == 0 and parser.file:
-        # Marks the Python file object as being closed from Python's point of
-        # view. This does not close the associated C stream (which is not
-        # necessary here, otherwise use "os.close(0)").
-        parser.file.close()
 
 
 import sys, os, sha, re, imp, traceback
