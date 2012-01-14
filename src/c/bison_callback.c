@@ -133,7 +133,7 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
     INIT_ATTR(py_attr_close_name, "close");
 
     // Check if the "hook_READ_BEFORE" callback exists
-    if (unlikely(!PyObject_HasAttr(parser, py_attr_hook_read_before_name)))
+    if (PyObject_HasAttr(parser, py_attr_hook_read_before_name))
     {
         handle = PyObject_GetAttr(parser, py_attr_hook_read_before_name);
         if (unlikely(!handle)) return;
