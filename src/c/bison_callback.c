@@ -163,7 +163,17 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
     Py_DECREF(handle);
     Py_DECREF(arglist);
 
-    if (unlikely(!res)) { return; }
+    if (unlikely(!res)) {
+        // Catch and reset KeyboardInterrupt exception
+        PyObject *given = PyErr_Occurred();
+        if (given && PyErr_GivenExceptionMatches(given,
+                                                 PyExc_KeyboardInterrupt)) {
+
+            PyErr_Clear();
+        }
+
+        return;
+    }
 
     // Check if the "hook_read_after" callback exists
     if (unlikely(!PyObject_HasAttr(parser, py_attr_hook_read_after_name)))
