@@ -24,11 +24,12 @@ from bison_ import ParserEngine
 from .node import BisonNode
 
 class BisonSyntaxError(Exception):
-    def __init__(self, msg, args):
+    def __init__(self, msg, args=[]):
         super(BisonSyntaxError, self).__init__(msg)
 
-        self.first_line, self.first_col, self.last_line, self.last_col, \
-                self.message, self.token_value = args
+        if args:
+            self.first_line, self.first_col, self.last_line, self.last_col, \
+                    self.message, self.token_value = args
 
 class TimeoutError(Exception):
     pass
