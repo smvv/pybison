@@ -44,9 +44,15 @@ static PyObject *py_attr_close_name;
 
 // Construct attribute names (only the first time)
 // TODO: where do we Py_DECREF(handle_name) ??
-#define INIT_ATTR(variable, name) \
+#define INIT_ATTR(variable, name, failure) \
     if (unlikely(!variable)) { \
         variable = PyString_FromString(name); \
+        if (!variable) failure; \
+    }
+
+#define debug_refcnt(variable, count) { \
+        printf(#variable ": %d\n", Py_REFCNT(variable)); \
+        assert(Py_REFCNT(variable) == count); \
     }
 
 /*
@@ -80,8 +86,8 @@ PyObject* py_callback(PyObject *parser, char *target, int option, int nargs,
 
     va_end(ap);
 
-    INIT_ATTR(py_attr_handle_name, "_handle");
-    INIT_ATTR(py_attr_hook_handler_name, "hook_handler");
+    INIT_ATTR(py_attr_handle_name, "_handle", return NULL);
+    INIT_ATTR(py_attr_hook_handler_name, "hook_handler", return NULL);
 
     // Call the handler with the arguments
     PyObject *handle = PyObject_GetAttr(parser, py_attr_handle_name);
@@ -126,11 +132,11 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
     PyObject *handle, *arglist, *res;
     char *bufstr;
 
-    INIT_ATTR(py_attr_hook_read_after_name, "hook_read_after");
-    INIT_ATTR(py_attr_hook_read_before_name, "hook_read_before");
-    INIT_ATTR(py_attr_read_name, "read");
-    INIT_ATTR(py_attr_file_name, "file");
-    INIT_ATTR(py_attr_close_name, "close");
+    INIT_ATTR(py_attr_hook_read_after_name, "hook_read_after", return);
+    INIT_ATTR(py_attr_hook_read_before_name, "hook_read_before", return);
+    INIT_ATTR(py_attr_read_name, "read", return);
+    INIT_ATTR(py_attr_file_name, "file", return);
+    INIT_ATTR(py_attr_close_name, "close", return);
 
     // Check if the "hook_READ_BEFORE" callback exists
     if (PyObject_HasAttr(parser, py_attr_hook_read_before_name))
