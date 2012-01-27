@@ -76,7 +76,6 @@ PyObject* py_callback(PyObject *parser, char *target, int option, int nargs,
     // Construct the names and values list from the variable argument list.
     for(i = 0; i < nargs; i++) {
         PyObject *name = PyString_FromString(va_arg(ap, char *));
-        Py_INCREF(name);
         PyList_SetItem(names, i, name);
 
         PyObject *value = va_arg(ap, PyObject *);
