@@ -104,14 +104,11 @@ PyObject* py_callback(PyObject *parser, char *target, int option, int nargs,
     if (unlikely(!res)) return res;
 
     // Check if the "hook_handler" callback exists
-    if (unlikely(!PyObject_HasAttr(parser, py_attr_hook_handler_name)))
-        return res;
-
     handle = PyObject_GetAttr(parser, py_attr_hook_handler_name);
 
-    if (unlikely(!handle)) {
-        Py_DECREF(res);
-        return NULL;
+    if (!handle) {
+        PyErr_Clear();
+        return res;
     }
 
     // Call the "hook_handler" callback
