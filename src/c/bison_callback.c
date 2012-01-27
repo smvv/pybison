@@ -111,6 +111,10 @@ PyObject* py_callback(PyObject *parser, char *target, int option, int nargs,
         return res;
     }
 
+    // XXX: PyObject_GetAttr increases the refcnt of py_attr_hook_handler_name
+    // by one.
+    //debug_refcnt(py_attr_hook_handler_name, 1);
+
     // Call the "hook_handler" callback
     arglist = Py_BuildValue("(siOOO)", target, option, names, values, res);
     if (unlikely(!arglist)) { Py_DECREF(handle); return res; }
