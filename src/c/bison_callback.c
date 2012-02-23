@@ -152,6 +152,8 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
 
         Py_DECREF(handle);
         Py_DECREF(arglist);
+
+        if (unlikely(!res)) { return; }
     }
 
     // Read the input string and catch keyboard interrupt exceptions.
@@ -194,7 +196,7 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
 
     res = PyObject_CallObject(handle, arglist);
 
-    Py_DECREF(res);
+    Py_XDECREF(res);
     Py_DECREF(handle);
     Py_DECREF(arglist);
 
@@ -224,7 +226,7 @@ finish_input:
 
         res = PyObject_CallObject(handle, arglist);
 
-        Py_DECREF(res);
+        Py_XDECREF(res);
         Py_DECREF(handle);
         Py_DECREF(arglist);
 
