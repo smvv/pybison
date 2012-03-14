@@ -361,7 +361,8 @@ cdef class ParserEngine:
                             if option[i] == '%prec':
                                 i = i - 1
                                 break # hack for rules using '%prec'
-                            args.append('"%s", $%d' % (option[i], i+1))
+                            o = option[i].replace('"', '\\"')
+                            args.append('"%s", $%d' % (o, i+1))
 
                     # now, we have the correct terms count
                     action = action % (i + 1)

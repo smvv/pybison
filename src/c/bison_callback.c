@@ -153,15 +153,12 @@ void py_input(PyObject *parser, char *buf, int *result, int max_size)
         Py_DECREF(handle);
         Py_DECREF(arglist);
 
-        if (unlikely(!res)) { return; }
+        if (unlikely(!res)) return;
     }
 
     // Read the input string and catch keyboard interrupt exceptions.
     handle = PyObject_GetAttr(parser, py_attr_read_name);
-    if (unlikely(!handle)) {
-        // TODO: set exception message for missing attribute error
-        return;
-    }
+    if (unlikely(!handle)) return;
 
     arglist = Py_BuildValue("(i)", max_size);
     if (unlikely(!arglist)) { Py_DECREF(handle); return; }
