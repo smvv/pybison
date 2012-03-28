@@ -563,7 +563,7 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'deleting temporary bison output files:'
 
-        for f in [parser.bisonCFile, parser.bisonHFile]:
+        for f in [parser.bisonCFile, parser.bisonHFile, parser.flexCFile]:
             if parser.verbose:
                 print 'rm %s' % f
 
