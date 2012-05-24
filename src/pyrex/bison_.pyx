@@ -53,6 +53,7 @@ cdef extern from "../c/bison_callback.h":
 cdef extern from "../c/bisondynlib.h":
     void *bisondynlib_open(char *filename)
     int bisondynlib_close(void *handle)
+    void bisondynlib_reset()
     char *bisondynlib_err()
     object (*bisondynlib_lookup_parser(void *handle))(object, char *)
     char *bisondynlib_lookup_hash(void *handle)
@@ -120,6 +121,12 @@ cdef class ParserEngine:
         self.parserHash = hashParserObject(self.parser)
 
         self.openCurrentLib()
+
+    def reset(self):
+        """
+        Reset Flex's buffer and state.
+        """
+        bisondynlib_reset()
 
     def openCurrentLib(self):
         """

@@ -7,6 +7,7 @@
 
 void *bisondynlib_open(char *filename);
 int bisondynlib_close(void *handle);
+void bisondynlib_reset(void);
 char *bisondynlib_err(void);
 
 PyObject *(*bisondynlib_lookup_parser(void *handle))(PyObject *, void *, void *, int);
@@ -14,7 +15,6 @@ PyObject *(*bisondynlib_lookup_parser(void *handle))(PyObject *, void *, void *,
 char *bisondynlib_lookup_hash(void *handle);
 
 PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, int debug);
-
 /*
 int bisondynlib_build(char *libName, char *pyincdir);
 */

@@ -200,6 +200,9 @@ class BisonParser(object):
     def handle_timeout(self, signum, frame):
         raise TimeoutError('Computation exceeded timeout limit.')
 
+    def reset(self):
+        self.engine.reset()
+
     def run(self, **kw):
         """
         Runs the parser, and returns the top-most parse target.
@@ -247,6 +250,7 @@ class BisonParser(object):
         while not self.file.closed:
             # do the parsing job, spew if error
             self.last = None
+            self.engine.reset()
 
             try:
                 self.engine.runEngine(debug)

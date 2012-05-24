@@ -6,18 +6,35 @@
 #include <stdio.h>
 #include <dlfcn.h>
 
+void (*reset_flex_buffer)(void) = NULL;
+
 void *bisondynlib_open(char *filename)
 {
     void *handle;
 
-    dlerror();
     handle = dlopen(filename, (RTLD_NOW|RTLD_GLOBAL));
+
+    dlerror();
+
+    if (!handle)
+        return NULL;
+
+    reset_flex_buffer = dlsym(handle, "reset_flex_buffer");
+
+    dlerror();
+
     return handle;
 }
 
 int bisondynlib_close(void *handle)
 {
     return dlclose(handle);
+}
+
+void bisondynlib_reset(void)
+{
+    if (reset_flex_buffer)
+        reset_flex_buffer();
 }
 
 char *bisondynlib_err()
@@ -28,16 +45,19 @@ char *bisondynlib_err()
 char *bisondynlib_lookup_hash(void *handle)
 {
     char **hash;
-    dlerror();
+
     hash = dlsym(handle, "rules_hash");
-    /*
-    printf("bisondynlib_lookup_hash: hash=%s\n", *hash);
-    */
-    return *hash;
+
+    dlerror();
+
+    return hash ? *hash : NULL;
 }
 
 PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, int debug)
 {
+    if(!handle)
+        return NULL;
+
     PyObject *(*pparser)(PyObject *, void *, void *, int);
 
     pparser = bisondynlib_lookup_parser(handle);
@@ -60,12 +80,17 @@ PyObject *bisondynlib_run(void *handle, PyObject *parser, void *cb, void *in, in
 }
 
 /*
- * function(void *) returns a pointer to a function(PyObject *, char *) returning PyObject*
+ * function(void *) returns a pointer to a function(PyObject *, char *)
+ * returning PyObject*
  */
 PyObject *(*bisondynlib_lookup_parser(void *handle))(PyObject *, void *, void *, int)
 {
+    PyObject *(*do_parse)(PyObject *, void *, void *, int) = dlsym(handle,
+            "do_parse");
+
     dlerror();
-    return dlsym(handle, "do_parse");
+
+    return do_parse;
 }
 
 /*
