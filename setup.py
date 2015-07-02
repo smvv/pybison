@@ -32,14 +32,17 @@ setup(
         author='David McNab <david@freenet.org.nz>',
         url='http://www.freenet.org.nz/python/pybison',
         ext_modules=[
-            Extension('bison_', ['src/pyrex/bison_.pyx', bisondynlibModule],
+            Extension('bison_', [
+                    'src/pyrex/bison_.pyx',
+                    'src/c/bison_callback.c',
+                    bisondynlibModule],
                 libraries=libs,
                 extra_link_args=extra_link_args,
                 )
             ],
-        packages=[],
-        package_dir={'': 'src/python'},
-        py_modules=['bison'],
+        packages=['bison'],
+        package_dir={'bison': 'src/python'},
+        #py_modules=['node', 'xmlifier', 'convert'],
         cmdclass={'build_ext': build_ext},
         scripts=[bison2pyscript],
         )
