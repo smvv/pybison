@@ -574,7 +574,8 @@ cdef class ParserEngine:
             if parser.verbose:
                 print 'rm %s' % f
 
-            os.unlink(f)
+            if os.path.isfile(f):
+                os.unlink(f)
 
     def closeLib(self):
         """
