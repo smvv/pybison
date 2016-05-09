@@ -141,7 +141,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         '',
         'import sys',
         '',
-        'from bison import BisonParser, BisonNode #, BisonError',
+        'from bison import BisonParser, BisonNode, BisonSyntaxError',
         '',
         'bisonFile = \'%s\'  # original bison file' % bisonfileName,
         'lexFile = \'%s\'    # original flex file' % lexfileName,
