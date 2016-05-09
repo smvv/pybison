@@ -456,7 +456,8 @@ cdef class ParserEngine:
         f = open(buildDirectory + parser.flexFile, 'w')
         f.write('\n'.join(tmp) + '\n')
         f.close()
-
+        
+        distutils.log.set_verbosity(1)
         # create and set up a compiler object
         env = distutils.ccompiler.new_compiler(verbose=parser.verbose)
         env.set_include_dirs([distutils.sysconfig.get_python_inc()])
@@ -524,6 +525,13 @@ cdef class ParserEngine:
                            extra_preargs=parser.cflags_pre,
                            extra_postargs=parser.cflags_post,
                            debug=parser.debugSymbols)
+
+        env.add_library("python2.7")
+        env.add_library("pthread")
+        env.add_library("dl")        
+        env.add_library("util")
+        env.add_library("m")
+
         libFileName = buildDirectory + parser.bisonEngineLibName \
                       + imp.get_suffixes()[0][0]
 

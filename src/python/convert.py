@@ -101,7 +101,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
     # -------------------------------------------------------------
     # process rules
     rulesRaw = re.sub('\\n([\t ]+)', ' ', rulesRaw) # join broken lines
-    rulesLines = filter('', map(str.strip, re.split(unquoted % ';', rulesRaw)))
+    rulesLines = filter(lambda s: s != '', map(str.strip, re.split(unquoted % ';', rulesRaw)))
 
     rules = []
     for rule in rulesLines:
@@ -141,7 +141,7 @@ def bisonToPython(bisonfileName, lexfileName, pyfileName, generateClasses=0):
         '',
         'import sys',
         '',
-        'from bison import BisonParser, BisonNode, BisonError',
+        'from bison import BisonParser, BisonNode #, BisonError',
         '',
         'bisonFile = \'%s\'  # original bison file' % bisonfileName,
         'lexFile = \'%s\'    # original flex file' % lexfileName,

@@ -22,6 +22,7 @@ import traceback
 
 from bison_ import ParserEngine
 from .node import BisonNode
+from .convert import bisonToPython
 
 class BisonSyntaxError(Exception):
     def __init__(self, msg, args=[]):
