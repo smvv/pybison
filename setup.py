@@ -11,18 +11,18 @@ from Pyrex.Distutils import build_ext
 import sys
 
 if sys.platform == 'win32':
-    print 'No windows support at this time. PyBison won\'t work for you :('
+    print('No windows support at this time. PyBison won\'t work for you :(')
     libs = []
     extra_link_args = []
     bison2pyscript = 'utils/bison2py.py'
     bisondynlibModule = 'src/c/bisondynlib-win32.c'
-elif sys.platform == 'linux2':
+elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
     libs = ['dl']
     extra_link_args = []
     bison2pyscript = 'utils/bison2py'
     bisondynlibModule = 'src/c/bisondynlib-linux.c'
 else:
-    print 'Sorry, your platform is presently unsupported.'
+    print('Sorry, your platform is presently unsupported.')
     sys.exit(1)
 
 setup(
@@ -37,6 +37,7 @@ setup(
                     'src/c/bison_callback.c',
                     bisondynlibModule],
                 libraries=libs,
+                extra_compile_args=['-Wall', '-Wextra'],
                 extra_link_args=extra_link_args,
                 )
             ],
