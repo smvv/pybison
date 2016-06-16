@@ -537,6 +537,12 @@ cdef class ParserEngine:
         if parser.verbose:
             print 'linking: %s => %s' % (', '.join(objs), libFileName)
 
+        if sys.platform == 'darwin':
+            # on OSX, ld throws undefined symbol for shared library references
+            # however, we would like to link against libpython dynamically, so that
+            # the built .so will not depend on which python interpreter it runs on 
+            env.linker_so += ['-undefined', 'dynamic_lookup']
+
         env.link_shared_object(objs, libFileName)
 
         #cdef char *incdir
