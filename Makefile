@@ -1,13 +1,10 @@
-all: module doco
+all: module
 
 module:
-	python setup.py build
+	python2 setup.py build
 
 install:
-	python setup.py install
-
-doco:
-	epydoc -n "PyBison API Reference" -o doc/api build/lib*/bison.py
+	python2 setup.py install
 
 clean:
 	rm -rf *~ *.output tokens.h *.tab.* *.yy.c java-grammar new.* *.o *.so dummy build *.pxi *-lexer.c

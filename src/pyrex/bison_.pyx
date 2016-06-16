@@ -137,6 +137,9 @@ cdef class ParserEngine:
         parser = self.parser
         verbose = parser.verbose
 
+        if verbose:
+            distutils.log.set_verbosity(1)
+
         if not os.path.isfile(self.libFilename_py):
             self.buildLib()
 
