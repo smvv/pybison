@@ -16,11 +16,19 @@ if sys.platform == 'win32':
     extra_link_args = []
     bison2pyscript = 'utils/bison2py.py'
     bisondynlibModule = 'src/c/bisondynlib-win32.c'
-elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+elif sys.platform.startswith('linux'):
     libs = ['dl']
     extra_link_args = []
     bison2pyscript = 'utils/bison2py'
     bisondynlibModule = 'src/c/bisondynlib-linux.c'
+elif sys.platform.startswith('darwin'):
+    libs = ['dl']
+    extra_link_args = []
+    bison2pyscript = 'utils/bison2py'
+    bisondynlibModule = 'src/c/bisondynlib-linux.c'
+    from distutils import sysconfig
+    vars = sysconfig.get_config_vars()
+    vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
 else:
     print('Sorry, your platform is presently unsupported.')
     sys.exit(1)
